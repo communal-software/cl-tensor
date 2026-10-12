@@ -10,9 +10,9 @@ Dtypes are strict. Built-in storage supports arbitrary strides; extensions valid
 | `:c32` `:c64` | complex single/double | 8, 16 | yes |
 | `:s8` `:s16` `:s32` `:s64` | `(signed-byte n)` | n/8 | yes |
 | `:u8` `:u16` `:u32` `:u64` | `(unsigned-byte n)` | n/8 | yes |
-| `:f16` `:bf16` | `(unsigned-byte 16)` | 2 | storage only |
+| `:f16` `:bf16` | `(unsigned-byte 16)` | 2 | encoded storage; mixed f32 matmul |
 
-- Built-in computation rejects mixed dtypes. Conversion is explicit, with `astype`; extension methods declare the combinations they accept.
+- Built-in elementwise arithmetic requires matching dtypes. Conversion is explicit, with `astype`; extension methods declare the combinations they accept.
 - Scalars and constructor values are coerced to the tensor dtype. Integer dtypes require in-range integers; floats and ratios signal an error. Real dtypes reject complex values, and complex dtypes accept real values with a zero imaginary component.
 - Storage of `(unsigned-byte 16)` infers as `:u16`. Pass `:f16` or `:bf16` explicitly:
 
@@ -25,7 +25,7 @@ Dtypes are strict. Built-in storage supports arbitrary strides; extensions valid
 
 Integer arithmetic wraps at the dtype width; division truncates toward zero. [Conversion](conversion.md) rounds and clamps instead. `:f16` and `:bf16` access preserves raw bits; use `astype` to encode or decode numeric values.
 
-[Matrix multiplication](matmul.md) supports matching `:f32` or `:f64` operands through built-in kernels. Extension methods can accept mixed dtypes and select their result dtype. See [dtype and storage extensions](extensions.md).
+[Matrix multiplication](matmul.md) supports matching `:f32` or `:f64` operands, or one `:f16`/`:bf16` operand with one `:f32` operand and f32 output, through built-in kernels. Extension methods can accept mixed dtypes and select their result dtype. See [dtype and storage extensions](extensions.md).
 
 ## Strides
 
