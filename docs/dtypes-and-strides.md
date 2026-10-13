@@ -53,4 +53,4 @@ Strides count elements, not bytes, and may be negative or zero.
 
 Axes of size 1 ignore their stride.[^fast]
 
-[^fast]: Built-in elementwise operations pass storage, offsets and broadcast strides to one trivial-simd N-D call. Compatible contiguous axes coalesce into bulk runs; other layouts use native strided traversal or Lisp fallback. See [performance limitations](limitations.md#performance).
+[^fast]: Built-in elementwise operations pass storage, offsets and broadcast strides to one trivial-simd N-D call. Compatible contiguous axes coalesce into bulk runs; other layouts use native strided traversal or Lisp fallback. See [elementwise workspace limitations](elementwise.md#limitations).

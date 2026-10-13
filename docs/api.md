@@ -1,6 +1,6 @@
 # API
 
-Package `cl-tensor`, nickname it locally (`ct` below). Use qualified names: `abs`, `sqrt`, `min`, `max`, `concatenate`, `log`, `tanh`, `exp`, `sin` and `cos` shadow Common Lisp symbols. See [limitations](limitations.md) for planned operations.
+Package `cl-tensor`, nickname it locally (`ct` below). Use qualified names: `abs`, `sqrt`, `min`, `max`, `concatenate`, `log`, `tanh`, `exp`, `sin` and `cos` shadow Common Lisp symbols.
 
 | Topic | Reference |
 |---|---|

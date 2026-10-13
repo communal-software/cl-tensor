@@ -77,8 +77,13 @@ Output shape and dtype must exactly match the result. Reversed, transposed and p
 
 Inputs are read as if copied before overlapping output writes, including aliases across rows and distinct foreign views of shared memory. Exact elementwise in-place mappings need no snapshot. Ordinary validation happens before writes, even for empty outputs; arithmetic errors may leave part of the output updated.[^execution]
 
+## Limitations
+
+- General output validation uses O(element count) workspace when the sorted-stride uniqueness proof fails: [#5](https://github.com/communal-software/cl-tensor/issues/5), trivial-simd #150.
+- Mixed Lisp/foreign storage conservatively snapshots inputs, including disjoint memory: [#6](https://github.com/communal-software/cl-tensor/issues/6), trivial-simd #151.
+
 [^scalar-out]: Scalars have shape `nil`, so scalar-only arithmetic requires a rank-zero output. `select!` also broadcasts its mask. Scalar-only `compare!` uses its `:u8` output as numeric context, so operands must be in-range integers.
-[^execution]: Built-in backend-storage execution uses one upstream N-D call. Native-supported operations traverse signed and broadcast strides in C, using bulk kernels where available and scalar system math for activations. Complex operations, remaining conversion pairs and fallback configurations traverse storage directly in Lisp. See [performance limitations](limitations.md#performance) for snapshot and layout-validation workspace costs. Exceptional floating-point behavior follows trivial-simd and the active Lisp floating-point environment.
+[^execution]: Built-in backend-storage execution uses one upstream N-D call. Native-supported operations traverse signed and broadcast strides in C, using bulk kernels where available and scalar system math for activations. Complex operations, remaining conversion pairs and fallback configurations traverse storage directly in Lisp. See [workspace limitations](#limitations) for snapshot and layout-validation costs. Exceptional floating-point behavior follows trivial-simd and the active Lisp floating-point environment.
 
 [^activation]: Sigmoid computes `z = exp(-abs(x))`, then `1/(1+z)` for nonnegative inputs or `z/(1+z)` otherwise. Underflow remains backend-dependent. See [examples](../examples/tensors.lisp) for activations and RoPE angles, and [normalization](normalization.md) for softmax and RMSNorm.
 [^gelu]: GELU computes `0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x³)))`. Constants and intermediates use the input precision. This is the tanh approximation, with no exact-erf variant or approximation selector.

@@ -96,7 +96,7 @@ Split accepts a positive section count dividing the axis evenly, or ordered cut 
 ## Limitations
 
 - Slicing supports basic integer and range selectors. Use `take` for axis-based integer gathers. Boolean masks, general advanced indexing, ellipsis and insertion selectors are outside this API.
-- Gather out-forms use full-result scratch; see [performance limitations](limitations.md#performance).
+- Gather out-forms use full-result scratch: [#11](https://github.com/communal-software/cl-tensor/issues/11).
 
 [^strides]: Reshape groups compatible stride chunks, ignoring singleton-axis strides. A new dimension cannot cross a discontinuity between chunks. Views retain their storage owner; callers keep foreign memory valid for the view's lifetime.
 

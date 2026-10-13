@@ -70,13 +70,13 @@ Interleaved destination matrices write directly to their backing storage. Compat
 
 Matrix-vector products retain transpose flags and pack irregular matrices into reusable buffers. Zero-stride vectors materialize. Matrix strides outside GEMM kernel limits use reusable scratch and individual products.
 
-See [performance limitations](limitations.md#performance) for workspace costs shared with other operations.
+See [elementwise workspace limitations](elementwise.md#limitations) for costs shared with other operations.
 
 See [matmul measurements](matmul-performance.md) for interleaved destinations and complete-call benchmarks.
 
 ## Limitations
 
-- General destination validation can use workspace proportional to element count, and input snapshots can include disjoint interleaved views. See [performance limitations](limitations.md#performance).
+- General destination validation can use workspace proportional to element count, and input snapshots can include disjoint interleaved views. See [elementwise workspace limitations](elementwise.md#limitations).
 
 [^output]: Every potentially overlapping input is snapshotted before any batch writes. Ordinary validation precedes writes; computation errors may leave part of the destination updated.
 [^validation]: Upstream checks matrix and constant-stride batch uniqueness and input/output overlap without enumerating addresses into a table. Difficult layouts can require substantial search time. cl-tensor separately validates the complete N-D destination before dispatch.

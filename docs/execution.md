@@ -64,7 +64,9 @@ Reduction and fusion computation failures leave supplied destinations unchanged.
 ## Limitations
 
 - The executor must guarantee complete, disjoint coverage and completion; core does not retain an O(group count) coverage map.
-- Splitting a single contraction, automatic elementwise/normalization scheduling and built-in pool management are outside this interface.
+- Single contractions remain sequential: [#18](https://github.com/communal-software/cl-tensor/issues/18).
+- Per-call executor overrides are unsupported: [#20](https://github.com/communal-software/cl-tensor/issues/20).
+- Automatic elementwise/normalization scheduling and built-in pool management are outside this interface.
 - More workers can increase overhead and scratch allocation. Choose thresholds using [complete-call measurements](fusion-performance.md).
 
 [^bindings]: Core propagates trivial-simd backend and FMA settings. Executors remain responsible for any additional application bindings and worker floating-point environment. Concurrent mutation of inputs, tensor metadata or dtype registration is outside the operation contract.

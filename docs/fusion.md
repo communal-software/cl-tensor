@@ -74,7 +74,11 @@ Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load e
 
 ## Limitations
 
-- Integer/complex computation, custom dtypes, mask outputs, mean, widened accumulation, per-reducer axis sets and arbitrary Lisp calls are unsupported.
+- Mean and widened accumulation are unsupported: [#15](https://github.com/communal-software/cl-tensor/issues/15).
+- Integer/complex computation is unsupported: [#16](https://github.com/communal-software/cl-tensor/issues/16).
+- Mask outputs and count/any/all reductions are unsupported: [#17](https://github.com/communal-software/cl-tensor/issues/17).
+- All reducers share one axis set: [#19](https://github.com/communal-software/cl-tensor/issues/19).
+- Custom dtypes and arbitrary Lisp calls are unsupported.
 - Expressions containing selection execute through the upstream Lisp backend to preserve lazy branches. Native branch evaluation is tracked in [trivial-simd #81](https://github.com/communal-software/trivial-simd/issues/81).
 - Out-forms stage complete results. Packed reduction operands and scalar-variable operands retain one complete row per worker; irregular nested vector results also use a row buffer. Plain elementwise packing is bounded to 4,096 elements per operand. Bounded multi-pass execution and transactional output are tracked in [#13](https://github.com/communal-software/cl-tensor/issues/13).
 - Strided packing and per-row kernel setup can outweigh saved expression tensors. Direct N-D expression execution is tracked in [#14](https://github.com/communal-software/cl-tensor/issues/14).

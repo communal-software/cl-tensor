@@ -62,7 +62,7 @@ The benchmark restores the current implementations after the baseline measuremen
 ## Limitations
 
 - Measurements describe ARM64 SBCL 2.6.8 on one Apple M1; they are not timing acceptance thresholds.
-- General destination validation and conservative snapshots remain covered by the [performance limitations](limitations.md#performance).
+- General destination validation and conservative snapshots remain covered by the [elementwise workspace limitations](elementwise.md#limitations).
 - Exact GEMM validation has bounded workspace but can take substantial search time on difficult layouts: trivial-simd #154.
 
 [^comparison]: The baseline sources are cl-tensor `cb1a96b` and trivial-simd `5cf7dcd`. Both phases use the same installed native library; the changes are Lisp validation and dispatch. Portable and native backends run separately for f32 and f64. A speedup below one means a slower call.

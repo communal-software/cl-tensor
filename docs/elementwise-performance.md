@@ -15,7 +15,7 @@ SBCL 2.6.8, Apple M1, native backend, `:f32` addition, 2026-10-06. Square views 
 | 65,536 reversed input | 251.28 | 87.80 | 507,926 | 1,671 |
 | 65,536 broadcast column | 204.35 | 16.42 | 192,860 | 1,720 |
 
-N-D metadata contributes a fixed setup cost to short calls. Ordinary stride traversal allocates no element buffers; alias snapshots and irregular output validation have separate [workspace limitations](limitations.md#performance).
+N-D metadata contributes a fixed setup cost to short calls. Ordinary stride traversal allocates no element buffers; alias snapshots and irregular output validation have separate [workspace limitations](elementwise.md#limitations).
 
 ## Reproduce
 

@@ -62,8 +62,6 @@ Elementwise operations compute the broadcast shape and validate tensor dtypes, t
 
 Lisp storage uses array access. Foreign storage uses typed CFFI access and remains owned by the caller; its memory must stay valid for the entire operation.
 
-See [limitations](limitations.md) for what is not built yet.
-
 ## Fusion and scheduling
 
 Expression macros lower f32/f64 tensor expressions into reusable trivial-simd kernels. Nested reducers share an axis set and operate on complete logical groups. Direct layouts use slices or row batches; other layouts pack bounded elementwise chunks or complete reduction rows. Destination-writing fusion stages an independent result before copying. See [fusion](fusion.md).
