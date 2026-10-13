@@ -32,7 +32,8 @@
            #:tref #:copy-tensor #:astype
            #:reshape #:transpose #:slice #:squeeze #:expand-dims #:concatenate #:stack #:split
            #:take #:take!
-           #:matmul #:matmul!
+           #:matmul #:matmul! #:*executor*
+           #:fuse #:fuse! #:define-kernel
            #:softmax #:softmax! #:rmsnorm #:rmsnorm!
            #:sum #:sum! #:mean #:mean! #:minimum #:minimum! #:maximum #:maximum!
            #:argmin #:argmin! #:argmax #:argmax! #:prod #:prod!

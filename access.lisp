@@ -82,10 +82,10 @@
           (coerce-value value (tensor-dtype tensor))))
   value)
 
-(defun call-with-offsets (shape layouts offsets function)
+(defun call-with-offsets (shape layouts offsets function &optional offset-list-p)
   (labels ((walk (axis)
              (if (= axis (length shape))
-                 (apply function offsets)
+                 (if offset-list-p (funcall function offsets) (apply function offsets))
                  (let ((count (aref shape axis)))
                    (dotimes (i count)
                      (walk (1+ axis))

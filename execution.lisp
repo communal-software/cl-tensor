@@ -1,0 +1,28 @@
+(in-package #:cl-tensor)
+
+(defvar *executor* nil)
+
+(defun call-with-operation-ranges (count function)
+  (let ((executor *executor*)
+        (backend trivial-simd::*backend*)
+        (fma-mode trivial-simd::*fma-mode*))
+    (unless (or (null executor) (functionp executor))
+      (error "Executor must be a function or NIL"))
+    (flet ((work (start end)
+             (unless (and (integerp start) (integerp end) (<= 0 start end count))
+               (error "Invalid executor range [~S,~S) for ~D groups" start end count))
+             (when (< start end)
+               (let ((*executor* nil)
+                     (trivial-simd::*backend* backend)
+                     (trivial-simd::*fma-mode* fma-mode))
+                 (funcall function start end)))))
+      (cond ((zerop count))
+            ((or (null executor) (= count 1)) (work 0 count))
+            (t (funcall executor count #'work))))))
+
+(defun linear-layout-offset (position shape strides offset)
+  (loop for axis downfrom (1- (length shape)) to 0
+        do (multiple-value-bind (quotient remainder) (floor position (aref shape axis))
+             (incf offset (* remainder (aref strides axis)))
+             (setf position quotient)))
+  offset)

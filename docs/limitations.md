@@ -1,11 +1,10 @@
 # Limitations
 
-Registered dtype/storage extensions, constructors, access, copying, broadcasting operations, reductions, softmax, RMSNorm, shape manipulation, real-float matrix multiplication and dtype conversion are implemented. The following areas remain open.
+Registered dtype/storage extensions, constructors, access, copying, broadcasting operations, expression fusion, reductions, softmax, RMSNorm, shape manipulation, real-float matrix multiplication, and dtype conversion are implemented. The following areas remain open.
 
 | Area | Ticket |
 |---|---|
 | Inference architectures and production weight formats in `cl-inference` | cl-inference #1 |
-| Kernel fusion | [#1](https://github.com/communal-software/cl-tensor/issues/1) |
 | Parallel operations | [#2](https://github.com/communal-software/cl-tensor/issues/2) |
 | Autograd | [#3](https://github.com/communal-software/cl-tensor/issues/3) |
 | Continuous integration | [#4](https://github.com/communal-software/cl-tensor/issues/4) |
@@ -15,6 +14,9 @@ Registered dtype/storage extensions, constructors, access, copying, broadcasting
 
 | Limitation | Ticket |
 |---|---|
+| Fusion out-forms stage full results; irregular reduction inputs and scalar variables retain complete rows per worker | [#13](https://github.com/communal-software/cl-tensor/issues/13) |
+| Fusion uses Lisp packing for irregular strides and per-row setup for compatible broadcast/dependent-pass layouts | [#14](https://github.com/communal-software/cl-tensor/issues/14) |
+| Fused selection uses the Lisp backend to preserve lazy branches | [trivial-simd #81](https://github.com/communal-software/trivial-simd/issues/81) |
 | Gather out-forms retain full-result scratch | [#11](https://github.com/communal-software/cl-tensor/issues/11) |
 | Staged extension execution retains full-result scratch; non-elementwise accessible-storage fallback packs complete inputs | [#10](https://github.com/communal-software/cl-tensor/issues/10) |
 | Short elementwise calls pay fixed N-D layout setup overhead | trivial-simd #152 |

@@ -21,6 +21,7 @@ Construct, index and copy strided tensors; reshape and slice views; broadcast ar
 - [API](docs/api.md)
 - [Constructors and access](docs/constructors.md)
 - [Elementwise operations](docs/elementwise.md)
+- [Expression fusion](docs/fusion.md)
 - [Reductions](docs/reductions.md)
 - [Normalization](docs/normalization.md)
 - [Matrix multiplication](docs/matmul.md)

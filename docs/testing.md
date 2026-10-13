@@ -17,6 +17,7 @@ sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:test-system :cl-te
 | `tests/reductions.lisp` | All reducers, dtypes, axes, widening, empty groups, aliases, foreign storage and seeded enumeration |
 | `tests/normalization.lisp` | Softmax, weighted RMSNorm, axis sets, widened sums, empty inputs, arbitrary layouts, aliases and seeded scalar references |
 | `tests/matmul.lisp` | Encoded/f32 products in either order, vector/matrix/batch shapes, broadcast/reversed/padded layouts, aliases, validation, direct foreign weights without packing, interleaved output guards, storage sharing, dispatch counts and seeded reference products |
+| `tests/fusion.lisp` | Inline/named kernels, both precisions, nested reductions, axis sets, broadcasting/strides, foreign/custom aliases, lazy selection, failure staging, buffer bounds, tensor allocation counts and seeded coordinate references |
 | `tests/extensions.lisp` | External CLOS descriptors, operation tables, opaque blocks, packed gather, mixed matmul, conversion, bounded fallback buffers, safe direct selectors, validation, hidden aliases and failure atomicity |
 | `tests/random.lisp` | Seeded random shapes, strides, broadcasting and output uniqueness checked against independent Lisp calculations[^seed] |
 
@@ -34,6 +35,7 @@ Run the constructor, broadcasting, activation, normalization, shape, embedding l
 
 ```sh
 sbcl --non-interactive --load examples/tensors.lisp
+sbcl --non-interactive --load examples/fusion.lisp
 ```
 
 Run the external dtype/storage example:

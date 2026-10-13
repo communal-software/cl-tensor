@@ -64,4 +64,9 @@ Lisp storage uses array access. Foreign storage uses typed CFFI access and remai
 
 See [limitations](limitations.md) for what is not built yet.
 
+## Fusion
+
+Expression macros lower f32/f64 tensor expressions into reusable trivial-simd kernels. Nested reducers share an axis set and operate on complete logical groups. Direct layouts use slices or row batches; other layouts pack bounded elementwise chunks or complete reduction rows. Destination-writing fusion stages an independent result before copying. See [fusion](fusion.md).
+
+
 [^struct]: Accessors are `tensor-storage`, `tensor-dtype`, `tensor-shape`, `tensor-strides` and `tensor-offset`. The shape and stride vectors are not copied on access; do not modify them.
