@@ -256,6 +256,51 @@
              (when scatter (funcall scatter oi))))))))
   out)
 
+(defun parallel-matmul-run (a b out batch left-vector right-vector)
+  (let* ((ar (- (tensor-rank a) 2)) (br (- (tensor-rank b) 2))
+         (m (aref (tensor-shape a) ar)) (k (aref (tensor-shape a) (1+ ar)))
+         (n (aref (tensor-shape b) (1+ br)))
+         (groups (if left-vector n m))
+         (a-layout (broadcast-strides (matmul-batch-view a) batch))
+         (b-layout (broadcast-strides (matmul-batch-view b) batch))
+         (out-layout (tensor-strides (matmul-batch-view out))))
+    (call-with-operation-ranges
+     (* groups (reduce #'* batch))
+     (lambda (start end)
+       (let ((*encoded-matmul-addresses* nil))
+         (loop while (< start end)
+               do (multiple-value-bind (batch-index row) (floor start groups)
+                    (let* ((count (cl:min (- end start) (- groups row)))
+                           (ao (linear-layout-offset batch-index batch a-layout (tensor-offset a)))
+                           (bo (linear-layout-offset batch-index batch b-layout (tensor-offset b)))
+                           (oo (linear-layout-offset batch-index batch out-layout (tensor-offset out)))
+                           (aa (if left-vector
+                                   (layout-view a (list k) (list (aref (tensor-strides a) (1+ ar))) ao)
+                                   (layout-view a (list count k)
+                                                (subseq (tensor-strides a) ar)
+                                                (+ ao (* row (aref (tensor-strides a) ar))))))
+                           (bb (cond (right-vector
+                                      (layout-view b (list k) (list (aref (tensor-strides b) br)) bo))
+                                     (left-vector
+                                      (layout-view b (list k count) (subseq (tensor-strides b) br)
+                                                   (+ bo (* row (aref (tensor-strides b) (1+ br))))))
+                                     (t (layout-view b (list k n) (subseq (tensor-strides b) br) bo))))
+                           (output-axis (- (tensor-rank out) 2))
+                           (output (cond
+                                     (left-vector
+                                      (layout-view out (list count)
+                                                   (list (aref (tensor-strides out) (1+ output-axis)))
+                                                   (+ oo (* row (aref (tensor-strides out) (1+ output-axis))))))
+                                     (right-vector
+                                      (layout-view out (list count)
+                                                   (list (aref (tensor-strides out) output-axis))
+                                                   (+ oo (* row (aref (tensor-strides out) output-axis)))))
+                                     (t (layout-view out (list count n)
+                                                     (subseq (tensor-strides out) output-axis)
+                                                     (+ oo (* row (aref (tensor-strides out) output-axis))))))))
+                      (builtin-tensor-matmul aa bb output)
+                      (incf start count)))))))))
+
 (defun builtin-tensor-matmul (a b out)
   (check-type a tensor)
   (check-type b tensor)
@@ -313,9 +358,10 @@
                                                   (append (coerce batch 'list) (list m n))
                                                   :dtype (tensor-dtype result) :offset (tensor-offset result)
                                                   :strides matrix-strides)))
-                   (if encoded
-                       (encoded-matmul-run ap bp output batch)
-                       (matmul-run ap bp output batch k left-vector right-vector)))))
+                   (cond ((and *executor* (not (and left-vector right-vector)))
+                          (parallel-matmul-run ap bp output batch left-vector right-vector))
+                         (encoded (encoded-matmul-run ap bp output batch))
+                         (t (matmul-run ap bp output batch k left-vector right-vector))))))
         #+(or sbcl ccl ecl)
         (if encoded
             (call-with-encoded-matmul-addresses

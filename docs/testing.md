@@ -18,6 +18,7 @@ sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:test-system :cl-te
 | `tests/normalization.lisp` | Softmax, weighted RMSNorm, axis sets, widened sums, empty inputs, arbitrary layouts, aliases and seeded scalar references |
 | `tests/matmul.lisp` | Encoded/f32 products in either order, vector/matrix/batch shapes, broadcast/reversed/padded layouts, aliases, validation, direct foreign weights without packing, interleaved output guards, storage sharing, dispatch counts and seeded reference products |
 | `tests/fusion.lisp` | Inline/named kernels, both precisions, nested reductions, axis sets, broadcasting/strides, foreign/custom aliases, lazy selection, failure staging, buffer bounds, tensor allocation counts and seeded coordinate references |
+| `tests/execution.lisp` | Reversed/uneven ranges, reusable worker pool, backend/FMA bindings, completion after errors, concurrent/cold kernels, encoded/foreign/custom storage, aliases and selector ownership |
 | `tests/extensions.lisp` | External CLOS descriptors, operation tables, opaque blocks, packed gather, mixed matmul, conversion, bounded fallback buffers, safe direct selectors, validation, hidden aliases and failure atomicity |
 | `tests/random.lisp` | Seeded random shapes, strides, broadcasting and output uniqueness checked against independent Lisp calculations[^seed] |
 
@@ -36,6 +37,7 @@ Run the constructor, broadcasting, activation, normalization, shape, embedding l
 ```sh
 sbcl --non-interactive --load examples/tensors.lisp
 sbcl --non-interactive --load examples/fusion.lisp
+sbcl --non-interactive --load examples/executor.lisp
 ```
 
 Run the external dtype/storage example:
@@ -83,16 +85,26 @@ Measure custom-storage fallback and opaque executor staging:
 sbcl --non-interactive --load tests/extensions-bench.lisp
 ```
 
+Measure composed/fused expressions and sequential/three-worker operations:
+
+```sh
+sbcl --non-interactive --load tests/fusion-execution-bench.lisp
+```
+
+See [fusion and executor measurements](fusion-performance.md) for complete-call timings, allocation and retained output. Worker-pool fixtures use Bordeaux Threads in the test system; the core system has no thread-library dependency.
+
 ## Validation
 
-SBCL 2.6.8 and ECL execute the full suite and the tensor, extension and upstream N-D examples. Recorded run, 2026-10-08:
+SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-13:
 
 | Implementation/backend | Passing checks |
 |---|---:|
-| SBCL default/native | 48,201 |
-| SBCL Lisp | 48,201 |
-| ECL | 47,303 |
-| Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors are untested, subject to the [CCL limitation](#limitations) |
+| SBCL default/native | 136,043 |
+| SBCL Lisp | 136,043 |
+| ECL | 135,715 |
+| Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
+
+Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,024 checks with the random state advanced from the initial run.[^seed]
 
 The extension checks cover public-interface-only external packages, opaque copying and writes, conversion destination selection, bounded elementwise buffers, malformed direct selectors, hidden aliases, validation before execution, and unchanged destinations on executor or late input-read failures. SBCL also injects a second-chunk kernel failure.[^injection] See [dispatch measurements](extensions-performance.md) and [staging measurements](extensions-staging-performance.md) for timing and allocation.
 

@@ -1,11 +1,10 @@
 # Limitations
 
-Registered dtype/storage extensions, constructors, access, copying, broadcasting operations, expression fusion, reductions, softmax, RMSNorm, shape manipulation, real-float matrix multiplication, and dtype conversion are implemented. The following areas remain open.
+Registered dtype/storage extensions, constructors, access, copying, broadcasting operations, expression fusion, reductions, softmax, RMSNorm, shape manipulation, real-float matrix multiplication, dtype conversion and external executor hooks are implemented. The following areas remain open.
 
 | Area | Ticket |
 |---|---|
 | Inference architectures and production weight formats in `cl-inference` | cl-inference #1 |
-| Parallel operations | [#2](https://github.com/communal-software/cl-tensor/issues/2) |
 | Autograd | [#3](https://github.com/communal-software/cl-tensor/issues/3) |
 | Continuous integration | [#4](https://github.com/communal-software/cl-tensor/issues/4) |
 | Complete normalization validation on experimental ARM64 CCL | [#9](https://github.com/communal-software/cl-tensor/issues/9) |

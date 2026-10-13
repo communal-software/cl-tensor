@@ -2,6 +2,8 @@
 
 `matmul` multiplies vectors, matrices and batches into an independent contiguous tensor. `(matmul! out a b)` writes the result into `out` and returns it. Both operands are tensors. Built-in kernels accept matching `:f32` or `:f64` dtypes, or one `:f16`/`:bf16` operand and one `:f32` operand. Mixed encoded/f32 products return `:f32` and require an f32 destination for `matmul!`. Use [astype](conversion.md) for other dtype combinations. [Extension methods](extensions.md) can accept mixed input dtypes and select the result dtype.
 
+Bind the [external executor](execution.md) to schedule independent output rows or vector-product elements. Core snapshots aliases before scheduling and keeps each contraction intact.
+
 ## Encoded weights
 
 ```lisp

@@ -1,0 +1,16 @@
+2026-10-13; Apple M1; SBCL 2.6.8; f32; three workers
+backend: :NATIVE
+case,first-call-us,warm-median-us,bytes/call
+CONTIGUOUS-composed,1846.000,64.300,524320.0d0
+CONTIGUOUS-fused,147.000,74.700,305209.6d0
+REVERSED-composed,241.000,174.100,524320.0d0
+REVERSED-fused,3241.000,3230.000,334456.0d0
+BROADCAST-composed,133.000,97.500,524320.0d0
+BROADCAST-fused,254.000,205.100,412857.6d0
+softmax-composed,414.000,343.200,793033.6d0
+softmax-fused,1072.000,993.600,557006.4d0
+softmax-fused-pool3,445.000,424.500,537337.6d0
+matmul-serial,602.000,524.500,262160.0d0
+matmul-pool3,319.000,275.800,262160.0d0
+reduction-serial,126.000,91.200,6446.4d0
+reduction-pool3,91.000,80.300,6312.0d0

@@ -81,10 +81,14 @@
                          (value (funcall scalar (tensor-storage input) :input-start offset :end width)))
                     (setf (aref values 0) (if (member operation '(:argmin :argmax)) (- value offset) value)))
                   (let ((matrix (reduction-rows input axes kept width rows)))
-                    (funcall batch (tensor-storage matrix) :rows rows :row-length width
-                                   :input-start (tensor-offset matrix)
-                                   :input-row-stride (aref (tensor-strides matrix) 0)
-                                   :destination values)))))
+                    (call-with-operation-ranges
+                     rows
+                     (lambda (start end)
+                       (funcall batch (tensor-storage matrix) :rows (- end start) :row-length width
+                                      :input-start (+ (tensor-offset matrix)
+                                                      (* start (aref (tensor-strides matrix) 0)))
+                                      :input-row-stride (aref (tensor-strides matrix) 0)
+                                      :destination values :destination-start start)))))))
           (when (eq operation :mean)
             (dotimes (i rows) (setf (aref values i) (/ (aref values i) width))))
           (when out

@@ -12,12 +12,12 @@
   :in-order-to ((asdf:test-op (asdf:test-op "cl-tensor/tests"))))
 
 (asdf:defsystem "cl-tensor/tests"
-  :depends-on ("cl-tensor" "fiveam")
+  :depends-on ("cl-tensor" "fiveam" "bordeaux-threads")
   :serial t
   :components ((:file "tests/package") (:file "tests/tensor")
                (:file "tests/constructors") (:file "tests/elementwise") (:file "tests/random")
                (:file "tests/shape") (:file "tests/reductions") (:file "tests/normalization")
-               (:file "tests/matmul") (:file "tests/fusion")
+               (:file "tests/matmul") (:file "tests/fusion") (:file "tests/execution")
                (:file "examples/extensions") (:file "tests/extensions"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))

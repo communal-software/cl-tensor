@@ -64,9 +64,10 @@ Lisp storage uses array access. Foreign storage uses typed CFFI access and remai
 
 See [limitations](limitations.md) for what is not built yet.
 
-## Fusion
+## Fusion and scheduling
 
 Expression macros lower f32/f64 tensor expressions into reusable trivial-simd kernels. Nested reducers share an axis set and operate on complete logical groups. Direct layouts use slices or row batches; other layouts pack bounded elementwise chunks or complete reduction rows. Destination-writing fusion stages an independent result before copying. See [fusion](fusion.md).
 
+The dynamic executor hook schedules independent matmul output rows and reduction groups. Validation and matmul alias snapshots precede scheduling; callbacks own mutable scratch and retain complete contractions. Core stays single-threaded unless the caller supplies an executor. See [external executors](execution.md).
 
 [^struct]: Accessors are `tensor-storage`, `tensor-dtype`, `tensor-shape`, `tensor-strides` and `tensor-offset`. The shape and stride vectors are not copied on access; do not modify them.

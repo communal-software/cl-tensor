@@ -11,6 +11,8 @@ Reduce all axes or selected axes into an independent tensor. A matching `!` form
 
 Elementwise bounds use [`min` and `max`](elementwise.md).
 
+The [external executor](execution.md) schedules independent retained-axis groups. Each group's reduction stays intact. [Expression fusion](fusion.md) combines elementwise work and nested reducers without intermediate expression tensors.
+
 The dtype rules below describe built-in implementations. [Extension methods](extensions.md) retain the reduction shape rules and select their accepted dtypes and result dtype.
 
 ## Axes and shape

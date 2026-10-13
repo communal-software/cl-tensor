@@ -62,13 +62,15 @@ Top-level arg reducers return `:s64` logical indices within the selected axes, e
 
 Empty sum groups return zero; product groups return one. Top-level extrema and arg reducers reject empty groups when an output is required. Empty vector results and identity reductions skip nested evaluation.
 
+The [executor hook](execution.md) schedules independent reduction groups. Plain elementwise expressions remain sequential.
+
 ## Destinations and storage
 
 Out-forms validate shape, dtype, uniqueness and copy support before computing. Inputs are read before any destination copy, including shifted and hidden storage aliases. Computation or input-read errors leave the destination unchanged; an error in a custom destination's copy method follows that method's guarantees.
 
 Built-in arrays and foreign views use direct contiguous slices or compatible row batches. Other layouts pack input values. Readable custom storage with a built-in f32/f64 dtype works through scalar access; custom destinations require copy support. Fusion bypasses custom operation selectors.
 
-Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load examples/fusion.lisp`.
+Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load examples/fusion.lisp`. See [measurements](fusion-performance.md) for timing and allocation.
 
 ## Limitations
 
