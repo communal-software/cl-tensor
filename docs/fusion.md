@@ -39,7 +39,7 @@ At least one referenced operand is a tensor. Tensor operands share one f32/f64 d
 | `(ct:select comparison a b)` | Numeric selection with lazy branches |
 | `ct:sum`, `ct:prod`, `ct:minimum`, `ct:maximum`, `ct:argmin`, `ct:argmax` | Top-level or nested reductions |
 
-The corresponding tensor arithmetic/math names also work, for example `ct:add`, `ct:multiply` and `ct:exp`. Unsupported operators and invalid expression kinds signal errors during macro expansion. Masks are internal to selection; fusion returns numeric tensors.
+The corresponding tensor arithmetic/math names also work, for example `ct:add`, `ct:multiply` and `ct:exp`. Unsupported operators and invalid expression kinds signal errors during macro expansion. Masks are internal to selection; fusion returns numeric tensors. Selection evaluates only the chosen branch per element on each backend.
 
 `(+ (* a b) c)` uses separate multiplication and addition rounding. FMA requires the explicit form above. Floating-point traps and exceptional values follow the active trivial-simd backend; results need not be bit-identical across backends.
 
@@ -79,7 +79,6 @@ Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load e
 - Mask outputs and count/any/all reductions are unsupported: [#17](https://github.com/communal-software/cl-tensor/issues/17).
 - All reducers share one axis set: [#19](https://github.com/communal-software/cl-tensor/issues/19).
 - Custom dtypes and arbitrary Lisp calls are unsupported.
-- Expressions containing selection execute through the upstream Lisp backend to preserve lazy branches. Native branch evaluation is tracked in [trivial-simd #81](https://github.com/communal-software/trivial-simd/issues/81).
 - Out-forms stage complete results. Packed reduction operands and scalar-variable operands retain one complete row per worker; irregular nested vector results also use a row buffer. Plain elementwise packing is bounded to 4,096 elements per operand. Bounded multi-pass execution and transactional output are tracked in [#13](https://github.com/communal-software/cl-tensor/issues/13).
 - Strided packing and per-row kernel setup can outweigh saved expression tensors. Direct N-D expression execution is tracked in [#14](https://github.com/communal-software/cl-tensor/issues/14).
 - Upstream `define-kernel` is experimental. Nested reductions require multiple passes and may recompute expressions; see [upstream limitations](https://github.com/communal-software/trivial-simd/blob/trunk/docs/kernel-passes.md#limitations).

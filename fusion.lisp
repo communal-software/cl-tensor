@@ -28,7 +28,7 @@
       (trivial-simd:argmin :argmin) (trivial-simd:argmax :argmax)))
 
   (defun parse-fusion (expression)
-    (let ((leaves nil) (parameters nil) (reducers nil) (selection-p nil))
+    (let ((leaves nil) (parameters nil) (reducers nil))
       (labels ((walk (form)
                  (cond
                    ((realp form) (values form :numeric))
@@ -54,7 +54,6 @@
                       (unless (if arity (= count arity) (plusp count))
                         (error "Invalid fusion arity in ~S" form))
                       (when reducer (pushnew reducer reducers))
-                      (when selection (setf selection-p t))
                       (let ((lowered
                               (loop for argument in arguments for index from 0
                                     collect (multiple-value-bind (body kind) (walk argument)
@@ -66,7 +65,7 @@
         (multiple-value-bind (body kind) (walk expression)
           (unless (eq kind :numeric) (error "Fusion requires a numeric result"))
           (values body (mapcar #'car (nreverse leaves)) (nreverse parameters)
-                  reducers (and (consp body) (fusion-reducer (first body))) selection-p)))))
+                  reducers (and (consp body) (fusion-reducer (first body))))))))
 
   (defun fusion-keys (parameters)
     (mapcar (lambda (parameter)
@@ -75,12 +74,12 @@
             parameters))
 
   (defun fusion-call-form (expression out axis keepdims)
-    (multiple-value-bind (body leaves parameters reducers outer selection-p) (parse-fusion expression)
+    (multiple-value-bind (body leaves parameters reducers outer) (parse-fusion expression)
       (let ((kernel (gensym "FUSED-KERNEL")))
         `(run-fusion
           (load-time-value
            (progn (trivial-simd:define-kernel ,kernel ,parameters ,body) (symbol-function ',kernel)))
-          ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims ,selection-p)))))
+          ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims)))))
 
 (defmacro fuse (expression &key axis keepdims)
   (fusion-call-form expression nil axis keepdims))
@@ -99,7 +98,7 @@
                       arguments)
                (= (length arguments) (length (remove-duplicates arguments))))
     (error "Invalid tensor kernel definition"))
-  (multiple-value-bind (body leaves parameters reducers outer selection-p) (parse-fusion expression)
+  (multiple-value-bind (body leaves parameters reducers outer) (parse-fusion expression)
     (unless (every (lambda (leaf) (member leaf arguments)) leaves)
       (error "Tensor kernel expression references an undeclared argument"))
     (let ((kernel (gensym "TENSOR-KERNEL")) (function (gensym "FUNCTION")) (out (gensym "OUT"))
@@ -110,11 +109,11 @@
                               (symbol-function ',kernel))))
          (defun ,name (,@arguments &key ((:axis ,axis)) ((:keepdims ,keepdims)))
            ,@(when unused `((declare (ignore ,@unused))))
-           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer nil ,axis ,keepdims ,selection-p))
+           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer nil ,axis ,keepdims))
          (defun ,out-name (,out ,@arguments &key ((:axis ,axis)) ((:keepdims ,keepdims)))
            ,@(when unused `((declare (ignore ,@unused))))
            (check-type ,out tensor)
-           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims ,selection-p))))))
+           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims))))))
 
 (defun fusion-slice (function parameters arrays starts destination destination-start count outer)
   (let ((options (loop for (start-key) in parameters for start in starts append (list start-key start))))
@@ -268,12 +267,10 @@
                                (setf (aref (tensor-storage result) offset) (aref output position))
                                (incf position))))))))))))))
 
-(defun run-fusion (function parameters operands reducers outer out axis keepdims &optional selection-p)
+(defun run-fusion (function parameters operands reducers outer out axis keepdims)
   (when out (check-type out tensor))
   (when (and keepdims (not outer)) (error "KEEPDIMS requires a top-level reduction"))
-  ;; TODO: Lisp selection fallback; restore backend after trivial-simd#81.
-  (let* ((trivial-simd::*backend* (if selection-p :lisp trivial-simd::*backend*))
-         (context (or (find-if #'tensorp operands) (error "Fusion requires a tensor operand")))
+  (let* ((context (or (find-if #'tensorp operands) (error "Fusion requires a tensor operand")))
          (dtype (tensor-dtype context))
          (shape (broadcast-shape operands))
          (rank (length shape)))

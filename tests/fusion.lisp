@@ -219,3 +219,53 @@
                                       when (equal group (mapcar (lambda (axis) (nth axis index)) kept)) sum value))))
           (check-fusion-values (ct:fuse (+ (* a b) 1)) values)
           (check-fusion-values (ct:fuse (ct:sum (+ (* a b) 1)) :axis axis) reference))))))
+
+(ct:define-kernel fused-test-lazy-root (a)
+  (ct:select (> a 0) (sqrt a) 0))
+(ct:define-kernel fused-test-lazy-normalize (a)
+  (/ (ct:select (> a 0) (sqrt a) 0)
+     (ct:sum (ct:select (> a 0) (sqrt a) 0))))
+
+(test fusion-native-lazy-selection
+  (when trivial-simd::*native-available-p*
+    (let* ((entry-points '(trivial-simd::call-native-kernel
+                           trivial-simd::call-declared-native
+                           trivial-simd::call-native-kernel-reduction))
+           (originals (mapcar #'symbol-function entry-points))
+           (calls 0)
+           (trivial-simd::*backend* :native))
+      (unwind-protect
+           (progn
+             (loop for name in entry-points for original in originals
+                   do (let ((function original))
+                        (setf (symbol-function name)
+                              (lambda (&rest arguments)
+                                (incf calls)
+                                (apply function arguments)))))
+             (dolist (dtype '(:f32 :f64))
+               (let ((base (ct:from-data '((1 -1 4) (-1 9 0)) :dtype dtype)))
+                 (dolist (a (list base (ct:transpose base)
+                                      (ct:slice base :selectors '(:all (nil nil -1)))))
+                   (let ((expected (mapcar (lambda (x) (sqrt (max 0 x))) (tensor-values a)))
+                         (out (ct:zeros (ct:tensor-shape a) :dtype dtype))
+                         (before calls))
+                     (check-fusion-values (ct:fuse (ct:select (> a 0) (sqrt a) 0)) expected)
+                     (check-fusion-values (fused-test-lazy-root a) expected)
+                     (check-fusion-values (fused-test-lazy-root! out a) expected)
+                     (check-fusion-values (ct:fuse (ct:sum (ct:select (> a 0) (sqrt a) 0))) '(6))
+                     (check-fusion-values (fused-test-lazy-normalize a)
+                                          (mapcar (lambda (x) (/ x 6)) expected))
+                     (let ((reference (let ((trivial-simd::*backend* :lisp))
+                                        (ct:fuse (ct:sum (ct:select (> a 0) (sqrt a) 0)) :axis -1))))
+                       (check-fusion-values
+                        (ct:fuse (ct:sum (ct:select (> a 0) (sqrt a) 0)) :axis -1)
+                        (tensor-values reference)))
+                     (is (> calls before))))
+                 (fused-test-lazy-root! base base)
+                 (check-fusion-values base '(1 0 2 0 3 0)))
+               (let ((a (ct:from-data '(-1 -4) :dtype dtype)))
+                 (signals error (ct:fuse (ct:select (< a 0) (sqrt a) 0)))
+                 (signals error (ct:fuse (ct:select (< a 0) (log a) 0)))))
+             (is (plusp calls)))
+        (loop for name in entry-points for original in originals
+              do (setf (symbol-function name) original))))))
