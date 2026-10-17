@@ -93,18 +93,29 @@ sbcl --non-interactive --load tests/fusion-execution-bench.lisp
 
 See [fusion and executor measurements](fusion-performance.md) for complete-call timings, allocation and retained output. Worker-pool fixtures use Bordeaux Threads in the test system; the core system has no thread-library dependency.
 
+## Device tests
+
+GPU storage tests are optional; the core suite needs no cl-gpu dependency.
+
+```sh
+sbcl --non-interactive --eval '(require :asdf)' \
+  --eval '(asdf:test-system "cl-tensor/gpu")'
+```
+
+The mock-device suite checks CPU allocation, specialized bulk transfers, signed 64-bit storage, reversed/broadcast/foreign uploads, buffer windows, ownership and error cleanup. See [device tensors](device.md).
+
 ## Validation
 
-SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-13:
+SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-17:
 
 | Implementation/backend | Passing checks |
 |---|---:|
-| SBCL default/native | 136,043 |
-| SBCL Lisp | 136,043 |
-| ECL | 135,715 |
+| SBCL default/native | 136,268 |
+| SBCL Lisp | 136,268 |
+| ECL | 137,360 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
 
-Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,024 checks with the random state advanced from the initial run.[^seed]
+Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,249 checks with the random state advanced from the initial run.[^seed]
 
 The extension checks cover public-interface-only external packages, opaque copying and writes, conversion destination selection, bounded elementwise buffers, malformed direct selectors, hidden aliases, validation before execution, and unchanged destinations on executor or late input-read failures. SBCL also injects a second-chunk kernel failure.[^injection] See [dispatch measurements](extensions-performance.md) and [staging measurements](extensions-staging-performance.md) for timing and allocation.
 

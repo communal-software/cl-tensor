@@ -96,9 +96,12 @@
     (walk 0)))
 
 (defmethod copy-storage-supported-p ((descriptor dtype) out)
-  (storage-writable-p (tensor-storage out)))
+  (storage-copy-supported-p (tensor-storage out) descriptor))
 
 (defmethod copy-storage! ((descriptor dtype) out input)
+  (copy-storage-between! descriptor (tensor-storage out) (tensor-storage input) out input))
+
+(defmethod copy-storage-between! ((descriptor dtype) (destination-storage t) (source-storage t) out input)
   (unless (and (eq (tensor-dtype out) (tensor-dtype input))
                (equalp (tensor-shape out) (tensor-shape input)))
     (error "Copy shape and dtype must match"))
@@ -115,8 +118,16 @@
   out)
 
 (defun copy-tensor (tensor)
-  (let ((result (make-tensor (tensor-shape tensor) :dtype (tensor-dtype tensor))))
-    (copy-storage! (find-dtype (tensor-dtype tensor)) result tensor)))
+  (let* ((dtype (tensor-dtype tensor))
+         (storage (allocate-storage-like (find-dtype dtype) (tensor-storage tensor)
+                                         (tensor-shape tensor)))
+         (success nil))
+    (unwind-protect
+         (let ((result (make-tensor-view storage (tensor-shape tensor) :dtype dtype)))
+           (copy-storage! (find-dtype dtype) result tensor)
+           (setf success t)
+           result)
+      (unless success (release-storage storage)))))
 
 (defun require-writable-storage (tensor)
   (unless (storage-writable-p (tensor-storage tensor))

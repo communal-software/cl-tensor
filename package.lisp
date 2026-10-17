@@ -6,6 +6,8 @@
            #:storage-length #:storage-element-type #:storage-readable-p #:storage-writable-p
            #:storage-ref #:allocate-storage #:coerce-scalar #:validate-storage-view
            #:copy-storage! #:copy-storage-supported-p #:resolve-operation
+           #:resolve-storage-operation #:allocate-storage-like #:storage-copy-supported-p
+           #:copy-storage-between! #:release-storage
            #:unsupported-operation #:unsupported-operation-name #:unsupported-operation-dtypes
            #:unsupported-storage-access #:unsupported-access-storage #:unsupported-access-kind
            #:dequantize #:*dtypes*

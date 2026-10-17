@@ -86,6 +86,24 @@ Selection visits distinct input descriptors in operand order, then the requested
 
 Vector–vector matmul tries `:dot`, then `:matmul`. Conversion hooks must return the requested dtype. `(dequantize tensor &key (dtype :f32))` tries `:dequantize`, then ordinary `astype` dispatch. Both return independent storage.
 
+## Storage-specific execution
+
+Storage hooks select placement independently of dtype. The optional [device extension](device.md) implements these hooks for GPU arrays while keeping ordinary dtype names and CPU allocation.
+
+| Generic method | Contract |
+|---|---|
+| `resolve-storage-operation (storage operation out inputs options)` | Return result dtype, executor and optional direct selector, or NIL to decline |
+| `allocate-storage-like (dtype storage shape)` | Independent zeroed storage matching the prototype's placement; default uses `allocate-storage` |
+| `storage-copy-supported-p (storage dtype)` | Whether the storage accepts same-dtype copies; default uses `storage-writable-p` |
+| `copy-storage-between! (dtype destination-storage source-storage out input)` | Copy tensors through storage-specific methods; default uses scalar access |
+| `release-storage (storage)` | Release temporary storage; default does nothing |
+
+Storage selection visits distinct input storage objects in operand order, then destination storage. An accepting selector uses its storage as the result allocation prototype. If all storage selectors decline, dtype selection follows the order above. The executor and direct-selector contracts are identical to dtype selection. A storage selector validates placement combinations before returning and may reject unsupported operations explicitly.
+
+Default `copy-storage-supported-p` and `copy-storage!` methods delegate to the storage copy hooks. Existing dtype-specialized overrides retain control. `copy-tensor` and copying reshape paths allocate through `allocate-storage-like`; ordinary constructors use `allocate-storage`.
+
+Core calls `release-storage` for staged operation results after copying, and for failed operation/copy allocations. Successful allocating calls transfer ownership to the caller. A specialized allocation method cleans up its own partial allocations if it signals before returning.
+
 ## Safe direct execution
 
 Return an optional third function to inspect a supplied destination after core checks its shape, dtype, uniqueness and copy support. This direct selector has signature `(out inputs options)`, performs no writes, and returns a direct executor or NIL to use staging. Core rejects non-function selectors and non-function executor results. Allocating calls use the ordinary executor.

@@ -23,3 +23,20 @@
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/tests :run-tests)
                (error "cl-tensor tests failed"))))
+
+(asdf:defsystem "cl-tensor/gpu"
+  :description "Explicit GPU tensor storage"
+  :depends-on ("cl-tensor" "cl-gpu/reductions")
+  :serial t
+  :components ((:file "gpu/package") (:file "gpu/kernels")
+               (:file "gpu/storage"))
+  :in-order-to ((asdf:test-op (asdf:test-op "cl-tensor/gpu/tests"))))
+
+(asdf:defsystem "cl-tensor/gpu/tests"
+  :depends-on ("cl-tensor/gpu" "cl-tensor/tests")
+  :serial t
+  :components ((:file "tests/gpu"))
+  :perform (asdf:test-op (op component)
+             (declare (ignore op component))
+             (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-tests)
+               (error "cl-tensor GPU protocol tests failed"))))

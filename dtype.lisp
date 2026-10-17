@@ -92,6 +92,24 @@
 (defgeneric copy-storage! (dtype out input))
 (defgeneric copy-storage-supported-p (dtype out))
 (defgeneric resolve-operation (dtype operation inputs options))
+(defgeneric resolve-storage-operation (storage operation out inputs options))
+(defgeneric allocate-storage-like (dtype storage shape))
+(defgeneric storage-copy-supported-p (storage dtype))
+(defgeneric copy-storage-between! (dtype destination-storage source-storage out input))
+(defgeneric release-storage (storage))
+
+(defmethod resolve-storage-operation ((storage t) operation out inputs options)
+  (declare (ignore operation out inputs options))
+  nil)
+
+(defmethod allocate-storage-like ((descriptor dtype) (storage t) shape)
+  (allocate-storage descriptor shape))
+
+(defmethod storage-copy-supported-p ((storage t) descriptor)
+  (declare (ignore descriptor))
+  (storage-writable-p storage))
+
+(defmethod release-storage ((storage t)) nil)
 
 (defmethod resolve-operation ((descriptor dtype) operation inputs options)
   (let ((selector (getf (dtype-operations descriptor) operation)))
