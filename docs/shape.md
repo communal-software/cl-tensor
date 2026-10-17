@@ -17,7 +17,7 @@ Shape operations create views sharing storage. `concatenate`, `stack` and `take`
 
 Negative axes count from the end. For `stack` and `expand-dims`, axes refer to the resulting rank. All operations preserve dtype, including raw `:f16` and `:bf16` storage.
 
-[Storage extensions](extensions.md) validate each resulting view and may reject unsupported layouts. Copying paths use the dtype copy method, allowing opaque storage when its layout supports the operation.
+[Storage extensions](extensions.md) validate each resulting view and may reject unsupported layouts. Copying paths use the dtype copy method, allowing opaque storage when its layout supports the operation. Copying reshape paths preserve storage placement; the [GPU extension](device.md) supports metadata views and reshape copying.
 
 ## Reshape and transpose
 

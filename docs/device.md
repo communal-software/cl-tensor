@@ -7,9 +7,12 @@ Load `cl-tensor/gpu` and a cl-gpu backend to store tensors on a GPU. Transfers a
 (asdf:load-system "cl-gpu/metal")
 
 (cl-tensor/gpu:with-device-tensor
-    (input (cl-tensor/gpu:to-device (cl-tensor:from-data '(1 2 3))))
-  (cl-tensor:tref (cl-tensor/gpu:from-device input) 1))
-;; => 2.0
+    (input (cl-tensor/gpu:to-device
+            (cl-tensor:from-data '((1 2 3) (4 5 6)))))
+  (cl-tensor/gpu:with-device-tensor
+      (result (cl-tensor:sum input :axis 1))
+    (cl-tensor:tref (cl-tensor/gpu:from-device result) 1)))
+;; => 15.0
 ```
 
 ## Allocate and transfer
@@ -30,11 +33,24 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 
 `tensor-storage` returns a `cl-gpu:gpu-array`. GPU storage has no scalar read/write access: download before calling `tref` or assigning elements.
 
-## Views and copying
+## Operations
 
-Metadata views share storage and accept signed and zero input strides. `copy-tensor` and copying `reshape` paths return independent device storage with the same dtype. GPU copies accept strided destinations and stage aliases on the device.
+| Operation | Device behavior |
+|---|---|
+| `sum`, `mean`, `prod`, `minimum`, `maximum` | F32 input and result |
+| `argmin`, `argmax` | F32 input; signed 64-bit result |
+| `softmax`, `rmsnorm` | F32 input and result; scalar or device tensor RMSNorm weights |
+| Matching `!` forms | Write a matching destination on the same device |
+| `copy-tensor`, copying `reshape` | Independent device copy, retaining dtype |
+| Metadata views | Share storage; offsets and signed/zero input strides work |
 
-Calls complete synchronously. Explicit transfers cross the CPU/device boundary; ordinary copying does not upload or download tensors implicitly.
+[Reduction](reductions.md) axis, `keepdims`, empty-group and logical index rules apply. [Normalization](normalization.md) axis and weight-broadcasting rules apply. An empty axis vector selects no axes; NIL selects all axes.
+
+Computation accepts only f32. `:accumulate :f64` signals an error. S64 supports storage, copying and downloads of arg results, but no arithmetic. Floating-point arithmetic uses upstream GPU kernels; results need not be bit-identical to CPU results.
+
+All tensor operands and a supplied destination must occupy the same device. Host tensor weights, CPU destinations and tensors on another device signal errors. Scalar weights are accepted. Use explicit transfers to cross the CPU/device boundary.
+
+Calls wait for completion before returning. Computation reads inputs before destination writes, including aliased weights and shifted input/output views. Validation and computation errors leave a destination unchanged; a failure during the final copy may partially update it.[^staging]
 
 ## Lifetime
 
@@ -50,10 +66,13 @@ Run [the device example](../examples/device.lisp) with:
 sbcl --non-interactive --load examples/device.lisp
 ```
 
-See [testing](testing.md#device-tests) for the mock-device suite.
+See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 ## Limitations
 
-- Computational GPU dispatch, extra storage dtypes, joins and gather are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23).
-- Copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
+- Elementwise operations, conversion, BLAS, fusion, joins and gather lack GPU dispatch; extra storage dtypes are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
+- Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).
+- Upstream kernels use one threadgroup per reduction group and upload layout metadata per call: [cl-gpu #74](https://github.com/communal-software/cl-gpu/issues/74), [cl-gpu #49](https://github.com/communal-software/cl-gpu/issues/49).
+
+[^staging]: Destination forms compute into independent GPU storage, wait for successful completion, then copy into the destination and wait again. Tensor values stay on the device throughout computation and copying; layout metadata is uploaded from the host. The CPU executor hook does not schedule GPU kernels.

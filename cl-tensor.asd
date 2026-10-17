@@ -25,18 +25,26 @@
                (error "cl-tensor tests failed"))))
 
 (asdf:defsystem "cl-tensor/gpu"
-  :description "Explicit GPU tensor storage"
+  :description "Explicit GPU tensor storage and axis operations"
   :depends-on ("cl-tensor" "cl-gpu/reductions")
   :serial t
   :components ((:file "gpu/package") (:file "gpu/kernels")
-               (:file "gpu/storage"))
+               (:file "gpu/storage") (:file "gpu/operations"))
   :in-order-to ((asdf:test-op (asdf:test-op "cl-tensor/gpu/tests"))))
 
 (asdf:defsystem "cl-tensor/gpu/tests"
   :depends-on ("cl-tensor/gpu" "cl-tensor/tests")
   :serial t
-  :components ((:file "tests/gpu"))
+  :components ((:file "tests/gpu") (:file "tests/gpu-operations"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-tests)
                (error "cl-tensor GPU protocol tests failed"))))
+
+(asdf:defsystem "cl-tensor/gpu/metal/tests"
+  :depends-on ("cl-tensor/gpu/tests" "cl-gpu/metal")
+  :components ((:file "tests/gpu-metal"))
+  :perform (asdf:test-op (op component)
+             (declare (ignore op component))
+             (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-metal-tests)
+               (error "cl-tensor Metal tests failed"))))

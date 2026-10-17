@@ -21,6 +21,8 @@ Out-forms take the same keywords: `(softmax! out input ...)` and `(rmsnorm! out 
 
 [Extension methods](extensions.md) retain the normalization shape and axis rules and declare their accepted dtypes and result dtype.
 
+The [GPU extension](device.md) supports f32 softmax and RMSNorm with scalar or same-device tensor weights. Results stay on-device; widened accumulation is unsupported.
+
 ## Axes
 
 Omitting `:axis` selects the last axis. Explicit `:axis nil` selects every axis. An integer selects one axis; a list or vector selects several. Negative axes count from the end. Duplicate and out-of-range axes signal errors.

@@ -44,7 +44,7 @@ Constructors return independent, row-major contiguous tensors with dtype `:f32` 
 
 `(tref tensor &rest indices)` reads an element; `(setf (tref tensor indices...) value)` writes a coerced value and returns the supplied value. There must be one integer index per axis, starting at zero. Negative indices and out-of-bounds indices signal an error.
 
-`(copy-tensor tensor)` preserves dtype, shape and logical values, with independent contiguous storage. It handles reversed, transposed and zero-stride views, including foreign storage. Printing shows dtype and shape without reading elements.
+`(copy-tensor tensor)` preserves dtype, shape and logical values, with independent contiguous storage. It handles reversed, transposed and zero-stride views, including foreign storage. Copying preserves storage placement: device copies stay on the same GPU. See [device tensors](device.md) for explicit transfers and lifetime. Printing shows dtype and shape without reading elements.
 
 ```lisp
 (let ((a (ct:zeros '(2 3))))

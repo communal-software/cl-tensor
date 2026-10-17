@@ -82,7 +82,7 @@ Core computes broadcasting, matmul and reduction shapes. Axes in hook options ar
 | `:convert` | Input tensor; requested `:dtype`, `:rounding` |
 | `:dequantize` | Input tensor; requested `:dtype` |
 
-Selection visits distinct input descriptors in operand order, then the requested destination dtype for conversion or an explicit dtype option. The first accepting method wins. Built-in methods decline unless their operation table supplies a selector. An operation-table selector receives `(dtype operation inputs options)` and follows the same multiple-value contract.
+Dtype selection visits distinct input descriptors in operand order, then the requested destination dtype for conversion or an explicit dtype option. The first accepting method wins. Built-in methods decline unless their operation table supplies a selector. An operation-table selector receives `(dtype operation inputs options)` and follows the same multiple-value contract.
 
 Vector–vector matmul tries `:dot`, then `:matmul`. Conversion hooks must return the requested dtype. `(dequantize tensor &key (dtype :f32))` tries `:dequantize`, then ordinary `astype` dispatch. Both return independent storage.
 

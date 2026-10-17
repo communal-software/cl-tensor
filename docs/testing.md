@@ -95,14 +95,18 @@ See [fusion and executor measurements](fusion-performance.md) for complete-call 
 
 ## Device tests
 
-GPU storage tests are optional; the core suite needs no cl-gpu dependency.
+GPU tests are optional; the core suite needs no cl-gpu dependency.
 
 ```sh
 sbcl --non-interactive --eval '(require :asdf)' \
   --eval '(asdf:test-system "cl-tensor/gpu")'
+sbcl --non-interactive --eval '(require :asdf)' \
+  --eval '(asdf:test-system "cl-tensor/gpu/metal/tests")'
 ```
 
-The mock-device suite checks CPU allocation, specialized bulk transfers, signed 64-bit storage, reversed/broadcast/foreign uploads, buffer windows, ownership and error cleanup. See [device tensors](device.md).
+The mock-device suite checks allocation, bulk transfers, storage dispatch, explicit placement, lifetime, validation and cleanup after launch/completion failures. The Metal suite compares reductions and normalization against CPU references across axis sets, signed/zero strides, padded layouts, GPU-array windows, weights, aliases, empty inputs and scalar results. Computation and device-copy checks forbid host downloads. Signed 64-bit indices and extreme integer copies compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+
+Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, download and explicit cleanup. See [device tensors](device.md) for setup and lifetime rules.
 
 ## Validation
 
@@ -114,6 +118,8 @@ SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusi
 | SBCL Lisp | 136,268 |
 | ECL | 137,360 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
+
+The SBCL and ECL GPU protocol suites each pass 101 checks; real Metal execution passes 1,278 checks. The CPU Lisp-backend suite also passes after the GPU extension loads.
 
 Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,249 checks with the random state advanced from the initial run.[^seed]
 

@@ -9,6 +9,8 @@ Reduce all axes or selected axes into an independent tensor. A matching `!` form
 | `minimum`, `maximum` | Smallest or largest value | Real and integer |
 | `argmin`, `argmax` | Logical index of the first extreme | Real and integer; result `:s64` |
 
+For f32 device inputs, the [GPU extension](device.md) keeps results on-device, including signed 64-bit arg indices. Transfers are explicit and widened accumulation is unsupported.
+
 Elementwise bounds use [`min` and `max`](elementwise.md).
 
 The [external executor](execution.md) schedules independent retained-axis groups. Each group's reduction stays intact. [Expression fusion](fusion.md) combines elementwise work and nested reducers without intermediate expression tensors.

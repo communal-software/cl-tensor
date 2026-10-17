@@ -28,13 +28,19 @@ A view is valid when:
 
 - the strides match the rank, the offset is non-negative and every size is non-negative;
 - the dtype validates storage compatibility and any layout restrictions;
-- every reachable storage index lies inside the storage. An empty view is always valid.
+- every reachable storage index of a nonempty view lies inside the storage. Storage-specific validation also checks empty views.
 
 ## Extension points
 
-Dtypes are registered CLOS descriptors. Storage kinds implement logical length, type and optional scalar access. Numerical operations select a dtype method before built-in execution; accepted extension out-forms stage independent results and copy through the dtype protocol, or use an explicitly selected alias-safe, failure-atomic direct executor. See [dtype and storage extensions](extensions.md).
+Dtypes are registered CLOS descriptors. Storage kinds implement logical length, type and optional scalar access. Numerical operations try storage-specific selection, then dtype selection, before built-in execution; accepted extension out-forms stage independent results and copy through the dtype protocol, or use an explicitly selected alias-safe, failure-atomic direct executor. See [dtype and storage extensions](extensions.md).
 
 Autograd attaches through a wrapper around a tensor, or through a subtype defined with `(:include tensor)`. Code that accepts a `tensor` accepts both.
+
+## Device storage
+
+The optional [GPU extension](device.md) wraps cl-gpu arrays without changing dtype names. Placement-aware allocation keeps copies and operation results on the input device; ordinary constructors retain CPU allocation. Transfers are explicit, and GPU storage omits scalar access.
+
+GPU reductions and normalization pass tensor dimensions, signed strides and offsets to cl-gpu/reductions. Calls wait for completion. Destination forms compute into independent device storage before copying, preserving aliases without downloading tensor values.
 
 ## Shape and reduction execution
 
@@ -46,7 +52,7 @@ See [reductions](reductions.md) and [shape operations](shape.md) for their inter
 
 ## Normalization
 
-Softmax and RMSNorm group selected axes into contiguous inner rows using the reduction layout helpers. Typed single- and double-float loops compute into independent storage; optional widened accumulation affects sums. RMSNorm applies broadcast weights to that storage before any destination write. Results restore the input axis order, and out-forms copy into validated strided destinations.
+CPU softmax and RMSNorm group selected axes into contiguous inner rows using the reduction layout helpers. Typed single- and double-float loops compute into independent storage; optional widened accumulation affects sums. RMSNorm applies broadcast weights to that storage before any destination write. Results restore the input axis order, and out-forms copy into validated strided destinations.
 
 See [normalization](normalization.md) for formulas, axes and precision, and [measurements](normalization-performance.md) for execution comparisons.
 
@@ -66,6 +72,6 @@ Lisp storage uses array access. Foreign storage uses typed CFFI access and remai
 
 Expression macros lower f32/f64 tensor expressions into reusable trivial-simd kernels. Nested reducers share an axis set and operate on complete logical groups. Direct layouts use slices or row batches; other layouts pack bounded elementwise chunks or complete reduction rows. Destination-writing fusion stages an independent result before copying. See [fusion](fusion.md).
 
-The dynamic executor hook schedules independent matmul output rows and reduction groups. Validation and matmul alias snapshots precede scheduling; callbacks own mutable scratch and retain complete contractions. Core stays single-threaded unless the caller supplies an executor. See [external executors](execution.md).
+The dynamic executor hook schedules independent matmul output rows and reduction groups. Validation and matmul alias snapshots precede scheduling; callbacks own mutable scratch and retain complete contractions. CPU execution stays single-threaded unless the caller supplies an executor. See [external executors](execution.md).
 
 [^struct]: Accessors are `tensor-storage`, `tensor-dtype`, `tensor-shape`, `tensor-strides` and `tensor-offset`. The shape and stride vectors are not copied on access; do not modify them.
