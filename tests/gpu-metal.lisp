@@ -145,3 +145,81 @@
         (is (equal before (host-values (tg:from-device out))))
         (signals error (ct:sum! (ct:make-tensor-view (ct:tensor-storage out) '(2) :strides '(0)) input :axis 1))
         (is (equal before (host-values (tg:from-device out))))))))
+
+(defun check-metal-matmul (a b device-a device-b)
+  (let ((expected (ct:matmul a b))
+        (ct:*executor* (lambda (&rest args) (declare (ignore args)) (error "CPU executor used"))))
+    (tg:with-device-tensor (result (let ((*forbid-download* t)) (ct:matmul device-a device-b)))
+      (is (same-values-p expected (tg:from-device result))))
+    (let* ((shape (ct:tensor-shape expected)) (size (ct:tensor-size expected))
+           (strides (map 'vector (lambda (stride) (* -2 stride)) (ct:row-major-strides shape))))
+      (tg:with-device-tensor (backing (tg:to-device (ct:full (list (+ 3 (* 2 size))) 77)))
+        (let ((out (ct:make-tensor-view (ct:tensor-storage backing) shape :strides strides
+                                      :offset (if (zerop size) 1 (1- (* 2 size))))))
+          (let ((*forbid-download* t)) (is (eq out (ct:matmul! out device-a device-b))))
+          (is (same-values-p expected (tg:from-device out)))
+          (let ((values (host-values (tg:from-device backing))))
+            (loop for value in values for i from 0
+                  unless (and (< i (* 2 size)) (oddp i)) do (is (= 77 value)))))))))
+
+(test metal-matmul-shapes-layouts-and-broadcasts
+  (let ((base (ct:from-data (loop for i below 256 collect (* 0.1f0 (- (mod i 17) 8))))))
+    (tg:with-device-tensor (device-base (tg:to-device base))
+      (dolist (case '((((3) (1) 0) ((3) (1) 8))
+                      (((3) (-2) 6) ((3) (0) 8))
+                      (((2 3) (3 1) 0) ((3) (1) 8))
+                      (((3) (1) 0) ((3 4) (4 1) 8))
+                      (((2 3) (3 1) 0) ((3 4) (4 1) 8))
+                      (((2 3) (1 2) 0) ((3 4) (1 3) 8))
+                      (((2 3) (0 -1) 4) ((3 4) (-8 2) 30))
+                      (((2 3) (12 2) 3) ((3 4) (10 2) 50))
+                      (((3 2 3) (-6 3 1) 12) ((3 3 4) (12 4 1) 30))
+                      (((2 1 2 3) (20 0 3 1) 0) ((1 3 3 4) (0 12 4 1) 50))
+                      (((3) (1) 0) ((2 3 4) (12 4 1) 30))
+                      (((2 2 3) (6 3 1) 0) ((3) (1) 30))
+                      (((1 3) (999999999999 1) 0) ((3 1) (1 -999999999999) 8))))
+        (destructuring-bind ((as astrides ao) (bs bstrides bo)) case
+          (let ((a (ct:make-tensor-view (ct:tensor-storage base) as :strides astrides :offset ao))
+                (b (ct:make-tensor-view (ct:tensor-storage base) bs :strides bstrides :offset bo)))
+            (check-metal-matmul a b (mirror-view a (ct:tensor-storage device-base))
+                                  (mirror-view b (ct:tensor-storage device-base)))))))))
+
+(test metal-matmul-window-offsets-and-interleaved-destinations
+  (let ((cpu (ct:from-data '(1 2 3 4 5 6 7 8 9 10 11 12))))
+    (tg:with-device-tensor (base (tg:to-device (ct:from-data '(99 99 1 2 3 4 5 6 7 8 9 10 11 12 99))))
+      (let* ((window (gpu:make-gpu-array-view (ct:tensor-storage base) 12 :offset 2))
+             (a (ct:make-tensor-view (ct:tensor-storage cpu) '(2 3) :offset 1))
+             (b (ct:make-tensor-view (ct:tensor-storage cpu) '(3 2) :offset 4)))
+        (check-metal-matmul a b (mirror-view a window) (mirror-view b window))
+        (tg:with-device-tensor (backing (tg:to-device (ct:full '(15) 77)))
+          (let* ((out (ct:make-tensor-view (ct:tensor-storage backing) '(2 2) :strides '(3 2) :offset 1))
+                 (expected (ct:matmul a b)))
+            (let ((*forbid-download* t)) (ct:matmul! out (mirror-view a window) (mirror-view b window)))
+            (is (same-values-p expected (tg:from-device out)))
+            (loop for value in (host-values (tg:from-device backing)) for i from 0
+                  unless (member i '(1 3 4 6)) do (is (= 77 value)))))))))
+
+(test metal-matmul-aliases-across-batches
+  (dolist (case '((((2 2) (2 1) 0) ((2 2) (2 1) 4) ((2 2) (2 1) 0))
+                  (((2 2) (2 1) 0) ((2 2) (2 1) 4) ((2 2) (2 1) 4))
+                  (((2 2) (2 1) 0) ((2 2) (2 1) 4) ((2 2) (2 1) 2))
+                  (((2 2 2) (4 2 1) 0) ((2 2) (2 1) 8) ((2 2 2) (4 2 1) 4))))
+    (let ((cpu (ct:from-data (loop for i from 1 to 20 collect i))))
+      (tg:with-device-tensor (base (tg:to-device cpu))
+        (destructuring-bind ((as astrides ao) (bs bstrides bo) (os ostrides oo)) case
+          (let* ((a (ct:make-tensor-view (ct:tensor-storage cpu) as :strides astrides :offset ao))
+                 (b (ct:make-tensor-view (ct:tensor-storage cpu) bs :strides bstrides :offset bo))
+                 (expected (ct:matmul a b))
+                 (out (ct:make-tensor-view (ct:tensor-storage base) os :strides ostrides :offset oo)))
+            (let ((*forbid-download* t))
+              (ct:matmul! out (mirror-view a (ct:tensor-storage base)) (mirror-view b (ct:tensor-storage base))))
+            (is (same-values-p expected (tg:from-device out)))))))))
+
+(test metal-matmul-empty-and-zero-contraction
+  (dolist (case '(((0 3) (3 2)) ((2 0) (0 3)) ((0) (0)) ((0 2 3) (3 4))
+                  ((2 1 2 0) (1 3 0 4)) ((0) (2 0 3))))
+    (destructuring-bind (as bs) case
+      (let ((a (ct:zeros as)) (b (ct:zeros bs)))
+        (tg:with-device-tensor (device-a (tg:to-device a))
+          (tg:with-device-tensor (device-b (tg:to-device b))
+            (check-metal-matmul a b device-a device-b)))))))

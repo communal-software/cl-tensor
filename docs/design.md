@@ -40,7 +40,7 @@ Autograd attaches through a wrapper around a tensor, or through a subtype define
 
 The optional [GPU extension](device.md) wraps cl-gpu arrays without changing dtype names. Placement-aware allocation keeps copies and operation results on the input device; ordinary constructors retain CPU allocation. Transfers are explicit, and GPU storage omits scalar access.
 
-GPU reductions and normalization pass tensor dimensions, signed strides and offsets to cl-gpu/reductions. Calls wait for completion. Destination forms compute into independent device storage before copying, preserving aliases without downloading tensor values.
+GPU reductions and normalization pass tensor dimensions, signed strides and offsets to cl-gpu/reductions. GPU matrix and vector products use cl-gpu/blas GEMM with constant-stride batching; dot products keep their scalar results in device storage. Calls wait for completion. Destination forms compute into independent device storage before copying, preserving aliases without downloading tensor values.
 
 ## Shape and reduction execution
 
@@ -58,7 +58,7 @@ See [normalization](normalization.md) for formulas, axes and precision, and [mea
 
 ## Matrix multiplication
 
-Matmul broadcasts batch axes and promotes vectors into matrix axes. Matrix products wrap existing storage with independent signed row/column strides and combine compatible batch axes into constant-stride GEMM runs. Vector products use dot/GEMV and retain packing for irregular matrix layouts. Overlapping inputs are snapshotted before batch writes. Destinations proven unique by upstream receive direct writes; other valid matrix layouts scatter from reusable scratch.
+CPU matmul broadcasts batch axes and promotes vectors into matrix axes. Matrix products wrap existing storage with independent signed row/column strides and combine compatible batch axes into constant-stride GEMM runs. Vector products use dot/GEMV and retain packing for irregular matrix layouts. Overlapping inputs are snapshotted before batch writes. Destinations proven unique by upstream receive direct writes; other valid matrix layouts scatter from reusable scratch.
 
 See [matrix multiplication](matmul.md) for shapes, dtypes and output behavior.
 

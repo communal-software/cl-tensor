@@ -4,6 +4,10 @@
 
 Bind the [external executor](execution.md) to schedule independent output rows or vector-product elements. Core snapshots aliases before scheduling and keeps each contraction intact.
 
+## Device tensors
+
+With `cl-tensor/gpu` loaded, f32 device inputs return device-resident results for every vector, matrix and broadcast-batch shape below. `matmul!` computes into independent device storage before copying into the destination. Inputs and destination must share one device; transfers remain explicit. GPU execution uses GEMM and batched GEMM, including for dot products. See [device tensors](device.md#matrix-products) for layouts, precision and failure behavior.
+
 ## Encoded weights
 
 ```lisp
@@ -55,7 +59,7 @@ An empty output performs no writes but still validates operands, shapes and dtyp
 
 ## Execution
 
-The following execution details describe built-in storage and dtypes. Extension methods use independent result storage and protocol copying unless they select a safe direct executor; readable custom storage with a built-in dtype uses packed backend fallback.
+The following execution details describe CPU built-in storage and dtypes. Extension methods use independent result storage and protocol copying unless they select a safe direct executor; readable custom storage with a built-in dtype uses packed backend fallback.
 
 Vectors use BLAS dot and matrix-vector routines; matrix products use stride-aware GEMM views over their backing storage. Transposed, reversed, padded and zero-stride input matrices work directly. Compatible batch axes combine into constant-stride runs, with one batched GEMM call per run; broadcast operands use a zero batch stride. A single product uses ordinary GEMM.[^backend]
 

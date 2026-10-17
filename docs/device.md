@@ -40,6 +40,7 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 | `sum`, `mean`, `prod`, `minimum`, `maximum` | F32 input and result |
 | `argmin`, `argmax` | F32 input; signed 64-bit result |
 | `softmax`, `rmsnorm` | F32 input and result; scalar or device tensor RMSNorm weights |
+| `matmul` | F32 vectors, matrices and broadcast batches; device-resident results |
 | Matching `!` forms | Write a matching destination on the same device |
 | `copy-tensor`, copying `reshape` | Independent device copy, retaining dtype |
 | Metadata views | Share storage; offsets and signed/zero input strides work |
@@ -60,6 +61,24 @@ Releasing a tensor whose storage owns a buffer invalidates **every tensor sharin
 
 A tensor constructed over `cl-gpu:make-gpu-array-view` borrows a buffer window. Releasing that tensor does not free the root buffer; its owner controls the lifetime. Window offsets and tensor offsets both contribute to addressing.
 
+## Matrix products
+
+`matmul` and `matmul!` use the [matrix multiplication](matmul.md#shapes) shape and broadcasting rules. Both inputs and a supplied destination are f32 tensors on one device. Vector dot products return rank-zero device tensors; downloading is explicit.
+
+```lisp
+(cl-tensor/gpu:with-device-tensor
+    (a (cl-tensor/gpu:to-device (cl-tensor:from-data '((1 2 3) (4 5 6)))))
+  (cl-tensor/gpu:with-device-tensor
+      (b (cl-tensor/gpu:to-device (cl-tensor:from-data '(1 2 3))))
+    (cl-tensor/gpu:with-device-tensor (result (cl-tensor:matmul a b))
+      (cl-tensor/gpu:from-device result))))
+;; f32 CPU tensor, shape (2), values (14 32)
+```
+
+Inputs accept transposed, padded, signed and zero strides, including GPU-array windows. Destinations accept any unique layout. Aliased inputs are consumed before destination writes. Empty outputs still validate shapes, placement and dtype; zero contraction dimensions produce zeros, including an empty vector dot product.
+
+Products use f32 GEMM, including vector products; compatible batch axes use constant-stride batched GEMM. Metal selects MPS for eligible layouts and DSL kernels otherwise. Dimensions are limited to 1,073,741,823. Results follow upstream arithmetic and may differ from CPU results in their final digits.
+
 Run [the device example](../examples/device.lisp) with:
 
 ```sh
@@ -70,7 +89,7 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 ## Limitations
 
-- Elementwise operations, conversion, BLAS, fusion, joins and gather lack GPU dispatch; extra storage dtypes are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
+- Elementwise operations, conversion, fusion, joins and gather lack GPU dispatch; extra storage dtypes are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
 - Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).
 - Upstream kernels use one threadgroup per reduction group and upload layout metadata per call: [cl-gpu #74](https://github.com/communal-software/cl-gpu/issues/74), [cl-gpu #49](https://github.com/communal-software/cl-gpu/issues/49).

@@ -25,8 +25,8 @@
                (error "cl-tensor tests failed"))))
 
 (asdf:defsystem "cl-tensor/gpu"
-  :description "Explicit GPU tensor storage and axis operations"
-  :depends-on ("cl-tensor" "cl-gpu/reductions")
+  :description "Explicit GPU tensor storage, axis operations and matrix products"
+  :depends-on ("cl-tensor" "cl-gpu/reductions" "cl-gpu/blas")
   :serial t
   :components ((:file "gpu/package") (:file "gpu/kernels")
                (:file "gpu/storage") (:file "gpu/operations"))

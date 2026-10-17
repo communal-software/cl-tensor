@@ -104,9 +104,22 @@ sbcl --non-interactive --eval '(require :asdf)' \
   --eval '(asdf:test-system "cl-tensor/gpu/metal/tests")'
 ```
 
-The mock-device suite checks allocation, bulk transfers, storage dispatch, explicit placement, lifetime, validation and cleanup after launch/completion failures. The Metal suite compares reductions and normalization against CPU references across axis sets, signed/zero strides, padded layouts, GPU-array windows, weights, aliases, empty inputs and scalar results. Computation and device-copy checks forbid host downloads. Signed 64-bit indices and extreme integer copies compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+| Suite | Coverage |
+|---|---|
+| Mock device | Allocation, bulk transfers, explicit placement, lifetime, validation, matmul batch grouping/window offsets, and cleanup after launch/completion failures, including later batches |
+| Metal | CPU references for reductions, normalization and matmul; signed/zero strides, padding, GPU-array windows, weights, aliases, empty inputs and scalar results |
 
-Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, download and explicit cleanup. See [device tensors](device.md) for setup and lifetime rules.
+Matmul checks include vector products, broadcast batches, aliases across batches, irregular destinations with guard values, and zero-contraction products. Computation and device-copy checks forbid host downloads. Signed 64-bit values compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+
+Run the Metal suite with MPS disabled to check the DSL kernels:
+
+```lisp
+(asdf:load-system "cl-tensor/gpu/metal/tests")
+(let ((cl-gpu/metal:*use-mps* nil))
+  (asdf:test-system "cl-tensor/gpu/metal/tests"))
+```
+
+Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, matmul, vector dot, download and explicit cleanup. See [device tensors](device.md) for setup and lifetime rules.
 
 ## Validation
 
@@ -116,10 +129,10 @@ SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusi
 |---|---:|
 | SBCL default/native | 136,268 |
 | SBCL Lisp | 136,268 |
-| ECL | 137,360 |
+| ECL | 135,416 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
 
-The SBCL and ECL GPU protocol suites each pass 101 checks; real Metal execution passes 1,278 checks. The CPU Lisp-backend suite also passes after the GPU extension loads.
+The SBCL and ECL GPU protocol suites each pass 187 checks; real Metal execution passes 1,604 checks with MPS enabled and again with MPS disabled. The CPU Lisp-backend suite also passes after the GPU extension loads.
 
 Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,249 checks with the random state advanced from the initial run.[^seed]
 

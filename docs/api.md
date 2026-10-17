@@ -14,7 +14,7 @@ Package `cl-tensor`, nickname it locally (`ct` below). Use qualified names: `abs
 | Views, reshape, slicing, gathering and joining | [Shape operations](shape.md) |
 | Explicit dtype changes, half-float encoding and dequantization | [Conversion](conversion.md) |
 | External dtypes, storage and operation methods | [Extensions](extensions.md) |
-| Explicit GPU transfers, storage and axis operations | [Device tensors](device.md) |
+| Explicit GPU transfers, storage, axis operations and matrix products | [Device tensors](device.md) |
 
 ## Construction
 

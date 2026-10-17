@@ -1,7 +1,46 @@
 (in-package #:cl-tensor/gpu)
 
+(defun device-matrix-view (tensor offset)
+  (let* ((axis (- (ct:tensor-rank tensor) 2))
+         (rows (aref (ct:tensor-shape tensor) axis))
+         (cols (aref (ct:tensor-shape tensor) (1+ axis))))
+    (blas:make-matrix-view
+     (ct:tensor-storage tensor) rows cols :offset offset
+     :row-stride (if (= rows 1) 0 (aref (ct:tensor-strides tensor) axis))
+     :column-stride (if (= cols 1) 0 (aref (ct:tensor-strides tensor) (1+ axis))))))
+
+(defun device-matmul (result left right)
+  (let* ((a (ct::matmul-promote left t)) (b (ct::matmul-promote right nil))
+         (m (aref (ct:tensor-shape a) (- (ct:tensor-rank a) 2)))
+         (k (aref (ct:tensor-shape a) (1- (ct:tensor-rank a))))
+         (n (aref (ct:tensor-shape b) (1- (ct:tensor-rank b))))
+         (batch (ct::broadcast-shape (list (ct::matmul-batch-view a) (ct::matmul-batch-view b)))))
+    (unless (or (zerop (ct:tensor-size result)) (zerop k))
+      (let* ((shape (concatenate 'vector batch (vector m n)))
+             (out (ct:make-tensor-view (ct:tensor-storage result) shape))
+             (layouts (list (ct::broadcast-strides (ct::matmul-batch-view a) batch)
+                            (ct::broadcast-strides (ct::matmul-batch-view b) batch)
+                            (ct:tensor-strides (ct::matmul-batch-view out)))))
+        (multiple-value-bind (prefix count steps) (ct::matmul-batch-run batch layouts)
+          (ct::call-with-offsets
+           (subseq batch 0 prefix) (mapcar (lambda (layout) (subseq layout 0 prefix)) layouts)
+           (list (ct:tensor-offset a) (ct:tensor-offset b) 0)
+           (lambda (ai bi oi)
+             (loop for start from 0 below count by 1073741823
+                   for chunk = (min 1073741823 (- count start))
+                   for av = (device-matrix-view a (+ ai (* start (first steps))))
+                   for bv = (device-matrix-view b (+ bi (* start (second steps))))
+                   for ov = (device-matrix-view out (+ oi (* start (third steps))))
+                   do (if (= chunk 1)
+                          (blas:sgemm :no-transpose :no-transpose 1f0 av bv 0f0 ov)
+                          (blas:sgemm-batch-strided
+                           :no-transpose :no-transpose 1f0 av bv 0f0 ov :batch-count chunk
+                           :a-stride (first steps) :b-stride (second steps) :c-stride (third steps)))))))))
+    (gpu:synchronize (tensor-device result)))
+  result)
+
 (defmethod ct:resolve-storage-operation ((storage gpu:gpu-array) operation out inputs options)
-  (unless (member operation '(:sum :mean :prod :minimum :maximum :argmin :argmax :softmax :rmsnorm))
+  (unless (member operation '(:sum :mean :prod :minimum :maximum :argmin :argmax :softmax :rmsnorm :matmul :dot))
     (error 'ct:unsupported-operation :operation operation
            :dtypes (mapcar #'ct:tensor-dtype (remove-if-not #'ct:tensorp inputs))))
   (when (getf options :accumulate) (error "GPU operations do not support widened accumulation"))
@@ -13,25 +52,35 @@
       (tensor-view tensor))
     (dolist (input (remove-if-not #'ct:tensorp inputs))
       (unless (eq (ct:tensor-dtype input) :f32) (error "GPU computation requires :F32")))
+    (when (member operation '(:matmul :dot))
+      (dolist (input inputs)
+        (let ((shape (ct:tensor-shape input)))
+          (loop for axis from (max 0 (- (length shape) 2)) below (length shape)
+                unless (<= (aref shape axis) 1073741823)
+                  do (error "GPU matmul dimensions exceed BLAS limits")))))
     (when (and (eq operation :rmsnorm) (second inputs) (not (ct:tensorp (second inputs))))
       (unless (realp (second inputs)) (error "RMSNorm weights must be real"))
       (coerce (second inputs) 'single-float))
     ;; TODO: synchronous full-result staging; add measured safe direct execution (#22).
     (values (if (member operation '(:argmin :argmax)) :s64 :f32)
-            (lambda (result operands parameters)
-              (let* ((input (tensor-view (first operands)))
-                     (target (tensor-view result))
-                     (axes (coerce (getf parameters :axis) 'vector)))
-                (case operation
-                  (:softmax (red:softmax! target input :axis axes))
-                  (:rmsnorm
-                   (red:rmsnorm! target input :axis axes :epsilon (getf parameters :epsilon)
-                                 :weights (if (ct:tensorp (second operands))
-                                              (tensor-view (second operands)) (second operands))))
-                  (otherwise
-                   (funcall (ecase operation
-                              (:sum #'red:sum!) (:mean #'red:mean!) (:prod #'red:prod!)
-                              (:minimum #'red:minimum!) (:maximum #'red:maximum!)
-                              (:argmin #'red:argmin!) (:argmax #'red:argmax!))
-                            target input :axis axes :keepdims (getf parameters :keepdims))))
-                (gpu:synchronize device))))))
+            (if (member operation '(:matmul :dot))
+                (lambda (result operands parameters)
+                  (declare (ignore parameters))
+                  (device-matmul result (first operands) (second operands)))
+                (lambda (result operands parameters)
+                  (let* ((input (tensor-view (first operands)))
+                         (target (tensor-view result))
+                         (axes (coerce (getf parameters :axis) 'vector)))
+                    (case operation
+                      (:softmax (red:softmax! target input :axis axes))
+                      (:rmsnorm
+                       (red:rmsnorm! target input :axis axes :epsilon (getf parameters :epsilon)
+                                     :weights (if (ct:tensorp (second operands))
+                                                  (tensor-view (second operands)) (second operands))))
+                      (otherwise
+                       (funcall (ecase operation
+                                  (:sum #'red:sum!) (:mean #'red:mean!) (:prod #'red:prod!)
+                                  (:minimum #'red:minimum!) (:maximum #'red:maximum!)
+                                  (:argmin #'red:argmin!) (:argmax #'red:argmax!))
+                                target input :axis axes :keepdims (getf parameters :keepdims))))
+                    (gpu:synchronize device)))))))
