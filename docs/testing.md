@@ -106,10 +106,10 @@ sbcl --non-interactive --eval '(require :asdf)' \
 
 | Suite | Coverage |
 |---|---|
-| Mock device | Allocation, bulk transfers, explicit placement, lifetime, validation, matmul batch grouping/window offsets, and cleanup after launch/completion failures, including later batches |
-| Metal | CPU references for reductions, normalization and matmul; signed/zero strides, padding, GPU-array windows, weights, aliases, empty inputs and scalar results |
+| Mock device | All storage dtypes, bulk/raw transfers, placement, lifetime, validation, elementwise/scalar/conversion dispatch, matmul batch grouping/window offsets and failure cleanup |
+| Metal | CPU and independent references for elementwise, masks, integer arithmetic/conversion, half-format bits, reductions, normalization and matmul; layouts, windows, aliases, errors and scalar results |
 
-Matmul checks include vector products, broadcast batches, aliases across batches, irregular destinations with guard values, and zero-contraction products. Computation and device-copy checks forbid host downloads. Signed 64-bit values compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+Matmul checks include vector products, broadcast batches, aliases across batches, irregular destinations with guard values, and zero-contraction products. Computation and device-copy checks forbid operand/result downloads; checked operations permit the documented single-word error status. Integers and encoded storage compare exactly; f32 values use relative/absolute tolerance `1e-4`.
 
 Run the Metal suite with MPS disabled to check the DSL kernels:
 
@@ -119,22 +119,22 @@ Run the Metal suite with MPS disabled to check the DSL kernels:
   (asdf:test-system "cl-tensor/gpu/metal/tests"))
 ```
 
-Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, matmul, vector dot, download and explicit cleanup. See [device tensors](device.md) for setup and lifetime rules.
+Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, matmul, vector dot, broadcast arithmetic, masks, conversion, download and explicit cleanup. See [device tensors](device.md) for setup and lifetime rules.
 
 ## Validation
 
-SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-17:
+SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-18:
 
 | Implementation/backend | Passing checks |
 |---|---:|
 | SBCL default/native | 136,268 |
 | SBCL Lisp | 136,268 |
-| ECL | 135,416 |
+| ECL | 135,985 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
 
-The SBCL and ECL GPU protocol suites each pass 187 checks; real Metal execution passes 1,604 checks with MPS enabled and again with MPS disabled. The CPU Lisp-backend suite also passes after the GPU extension loads.
+The SBCL and ECL GPU protocol suites each pass 610 checks; real Metal execution passes 2,272 checks on both Lisps with MPS enabled and again with MPS disabled. These include elementwise dispatch, scalar-only calls, all conversion pairs, raw half encodings, integer wrapping and staged failures. The CPU Lisp-backend suite also passes after the GPU extension loads.
 
-Normal and forced ASDF loading pass in a fresh SBCL process. The forced rerun passes 136,249 checks with the random state advanced from the initial run.[^seed]
+Normal and forced ASDF loading pass in a fresh SBCL process. Repeated runs advance the random state and may execute a different number of generated checks.[^seed]
 
 The extension checks cover public-interface-only external packages, opaque copying and writes, conversion destination selection, bounded elementwise buffers, malformed direct selectors, hidden aliases, validation before execution, and unchanged destinations on executor or late input-read failures. SBCL also injects a second-chunk kernel failure.[^injection] See [dispatch measurements](extensions-performance.md) and [staging measurements](extensions-staging-performance.md) for timing and allocation.
 

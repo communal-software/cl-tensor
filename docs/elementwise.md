@@ -77,6 +77,10 @@ Output shape and dtype must exactly match the result. Reversed, transposed and p
 
 Inputs are read as if copied before overlapping output writes, including aliases across rows and distinct foreign views of shared memory. Exact elementwise in-place mappings need no snapshot. Ordinary validation happens before writes, even for empty outputs; arithmetic errors may leave part of the output updated.[^execution]
 
+## Device tensors
+
+The optional GPU extension executes these APIs on f32 and integer device tensors. Real-float math requires f32; half formats remain storage-only. Broadcasting, scalar context and mask rules are the same. Calls complete synchronously, and destination forms stage results before writing. See [device tensors](device.md#elementwise-operations-and-conversion) for supported types, errors and transfer behavior.
+
 ## Limitations
 
 - General output validation uses O(element count) workspace when the sorted-stride uniqueness proof fails: [#5](https://github.com/communal-software/cl-tensor/issues/5), trivial-simd #150.

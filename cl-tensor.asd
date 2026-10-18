@@ -25,17 +25,17 @@
                (error "cl-tensor tests failed"))))
 
 (asdf:defsystem "cl-tensor/gpu"
-  :description "Explicit GPU tensor storage, axis operations and matrix products"
-  :depends-on ("cl-tensor" "cl-gpu/reductions" "cl-gpu/blas")
+  :description "Explicit GPU tensor storage and tensor operations"
+  :depends-on ("cl-tensor" "cl-gpu/reductions" "cl-gpu/blas" "cl-gpu/elementwise")
   :serial t
-  :components ((:file "gpu/package") (:file "gpu/kernels")
-               (:file "gpu/storage") (:file "gpu/operations"))
+  :components ((:file "gpu/package")
+               (:file "gpu/storage") (:file "gpu/elementwise") (:file "gpu/operations"))
   :in-order-to ((asdf:test-op (asdf:test-op "cl-tensor/gpu/tests"))))
 
 (asdf:defsystem "cl-tensor/gpu/tests"
   :depends-on ("cl-tensor/gpu" "cl-tensor/tests")
   :serial t
-  :components ((:file "tests/gpu") (:file "tests/gpu-operations"))
+  :components ((:file "tests/gpu") (:file "tests/gpu-operations") (:file "tests/gpu-elementwise"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-tests)
@@ -43,7 +43,8 @@
 
 (asdf:defsystem "cl-tensor/gpu/metal/tests"
   :depends-on ("cl-tensor/gpu/tests" "cl-gpu/metal")
-  :components ((:file "tests/gpu-metal"))
+  :serial t
+  :components ((:file "tests/gpu-metal") (:file "tests/gpu-elementwise-metal"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-metal-tests)

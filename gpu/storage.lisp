@@ -1,22 +1,24 @@
 (in-package #:cl-tensor/gpu)
 
+(defparameter *device-elements*
+  '((:f32 . gpu:f32) (:f16 . gpu:f16) (:bf16 . gpu:bf16)
+    (:s8 . gpu:i8) (:u8 . gpu:u8) (:s16 . gpu:i16) (:u16 . gpu:u16)
+    (:s32 . gpu:i32) (:u32 . gpu:u32) (:s64 . gpu:i64) (:u64 . gpu:u64)))
+
 (defun device-element (dtype)
-  (ecase dtype (:f32 'gpu:f32) (:s64 'gpu:i64)))
+  (or (cdr (assoc dtype *device-elements*))
+      (error "Unsupported device storage dtype ~S" dtype)))
 
 (defun array-dtype (array)
-  (cond ((eq (gpu:gpu-array-element-type array) (gpu:parse-type 'gpu:f32)) :f32)
-        ((eq (gpu:gpu-array-element-type array) (gpu:parse-type 'gpu:i64)) :s64)
-        (t (error "Device tensors support :F32 and :S64 storage"))))
+  (or (car (rassoc (gpu:scalar-type-name (gpu:gpu-array-element-type array)) *device-elements*))
+      (error "Unsupported device storage element type")))
 
 (defun tensor-view (tensor)
-  (red:make-strided-view (ct:tensor-storage tensor) (ct:tensor-shape tensor)
+  (gpu:make-strided-view (ct:tensor-storage tensor) (ct:tensor-shape tensor)
                          :strides (ct:tensor-strides tensor) :offset (ct:tensor-offset tensor)))
 
 (defun root-array (array)
   (if (gpu:gpu-array-view-p array) (gpu:gpu-array-view-owner array) array))
-
-(defun array-offset (array)
-  (if (gpu:gpu-array-view-p array) (gpu:gpu-array-view-offset array) 0))
 
 (defun tensor-device (tensor)
   (gpu:gpu-array-device (ct:tensor-storage tensor)))
@@ -29,7 +31,7 @@
 (defmethod ct:validate-storage-view :after ((dtype ct:dtype) (storage gpu:gpu-array) shape strides offset)
   (unless (eq (ct:dtype-name dtype) (array-dtype storage))
     (error "Device storage dtype does not match tensor dtype"))
-  (red:make-strided-view storage shape :strides strides :offset offset))
+  (gpu:make-strided-view storage shape :strides strides :offset offset))
 
 (defmethod ct:allocate-storage-like ((dtype ct:dtype) (storage gpu:gpu-array) shape)
   (gpu:make-gpu-array (reduce #'* shape) :element-type (device-element (ct:dtype-name dtype))
@@ -41,7 +43,7 @@
 (defmethod ct:release-storage ((storage gpu:gpu-array)) (gpu:free storage))
 
 (defun make-device-tensor (shape &key (dtype :f32) device)
-  "Allocate an independent zeroed device tensor of dtype :F32 or :S64."
+  "Allocate an independent zeroed tensor of a supported device dtype."
   (unless (every (lambda (n) (typep n '(integer 0 #.most-positive-fixnum))) shape)
     (error "Shape must contain nonnegative dimensions"))
   (let ((storage (gpu:make-gpu-array (reduce #'* shape) :element-type (device-element dtype)
@@ -66,26 +68,9 @@
      (unwind-protect (progn ,@body) (free-device-tensor ,name))))
 
 (defun copy-device-values! (out input)
-  (let* ((shape (ct:tensor-shape input)) (rank (length shape))
-         (n (ct:tensor-size input)) (device (tensor-device input)))
-    (unless (zerop n)
-      (let ((layout (make-array (* rank 3) :element-type '(signed-byte 64))))
-        (dotimes (i rank)
-          (let ((axis (- rank i 1)))
-            (setf (aref layout (* i 3)) (aref shape axis)
-                  (aref layout (+ (* i 3) 1)) (aref (ct:tensor-strides input) axis)
-                  (aref layout (+ (* i 3) 2)) (aref (ct:tensor-strides out) axis))))
-        (gpu:with-gpu-array (metadata (gpu:to-device layout :element-type 'gpu:i64 :device device))
-          (loop for start from 0 below n by 16776960
-                for count = (min (- n start) 16776960)
-                do (funcall (ecase (ct:tensor-dtype input) (:f32 #'copy-f32) (:s64 #'copy-s64))
-                            (root-array (ct:tensor-storage input)) (root-array (ct:tensor-storage out))
-                            metadata rank n
-                            (+ (array-offset (ct:tensor-storage input)) (ct:tensor-offset input))
-                            (+ (array-offset (ct:tensor-storage out)) (ct:tensor-offset out)) start
-                            :grid count :group 256 :device device))
-          (gpu:synchronize device))))
-    out))
+  (ew:convert! (tensor-view out) (tensor-view input))
+  (gpu:synchronize (tensor-device input))
+  out)
 
 (defmethod ct:copy-storage-between! ((dtype ct:dtype) (destination gpu:gpu-array)
                                     (source gpu:gpu-array) out input)
@@ -133,7 +118,8 @@
                                         (incf offset (* coordinate (aref (ct:tensor-strides tensor) axis)))
                                         (setf q next)))
                              (setf (aref values i) (ct:storage-ref storage offset)))))))
-           (array (gpu:to-device values :element-type element :device device)) (success nil))
+           (array (gpu:to-device values :element-type element :device device
+                                 :raw (member dtype '(:f16 :bf16)))) (success nil))
       (unwind-protect
            (let ((result (ct:make-tensor-view array (ct:tensor-shape tensor) :dtype dtype)))
              (gpu:synchronize (gpu:gpu-array-device array))
@@ -150,6 +136,6 @@
   (if (ct:contiguous-p tensor)
       (let* ((window (gpu:make-gpu-array-view (ct:tensor-storage tensor) (ct:tensor-size tensor)
                                                :offset (ct:tensor-offset tensor)))
-             (values (gpu:from-device window)))
+             (values (gpu:from-device window :raw (member (ct:tensor-dtype tensor) '(:f16 :bf16)))))
         (ct:make-tensor-view values (ct:tensor-shape tensor) :dtype (ct:tensor-dtype tensor)))
       (with-device-tensor (packed (ct:copy-tensor tensor)) (from-device packed))))

@@ -34,7 +34,6 @@
                               (lambda () (ct:rmsnorm input :weights weights))
                               (lambda () (ct:rmsnorm input :weights #C(1 2)))
                               (lambda () (ct:rmsnorm input :epsilon -1))
-                              (lambda () (ct:add input input))
                               (lambda () (ct:astype input :f64))
                               (lambda () (ct:sum! out (ct:ones '(2 3)) :axis 1))))
             (signals error (funcall thunk)))))

@@ -23,4 +23,18 @@
                       :softmax (ct:tensor-storage (tg:from-device softmax))
                       :rmsnorm (ct:tensor-storage (tg:from-device normalized)))))))))))
 
+(defun run-elementwise-example ()
+  (tg:with-device-tensor (input (tg:to-device (ct:from-data '((1) (2)))))
+    (tg:with-device-tensor (bias (tg:to-device (ct:from-data '(0 1 2))))
+      (tg:with-device-tensor (sum (ct:add input bias))
+        (tg:with-device-tensor (mask (ct:compare :gt sum 2))
+          (tg:with-device-tensor (selected (ct:select mask sum 0))
+            (tg:with-device-tensor (integer (ct:astype selected :s16))
+              (tg:with-device-tensor (encoded (ct:astype selected :bf16))
+                (tg:with-device-tensor (decoded (ct:dequantize encoded))
+                  (list :integers (ct:tensor-storage (tg:from-device integer))
+                        :decoded (ct:tensor-storage (tg:from-device decoded))))))))))))
+
 (format t "~S~%" (run-example))
+
+(format t "~S~%" (run-elementwise-example))

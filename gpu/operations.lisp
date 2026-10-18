@@ -39,17 +39,13 @@
     (gpu:synchronize (tensor-device result)))
   result)
 
-(defmethod ct:resolve-storage-operation ((storage gpu:gpu-array) operation out inputs options)
+(defun resolve-device-axis-operation (storage operation out inputs options)
   (unless (member operation '(:sum :mean :prod :minimum :maximum :argmin :argmax :softmax :rmsnorm :matmul :dot))
     (error 'ct:unsupported-operation :operation operation
            :dtypes (mapcar #'ct:tensor-dtype (remove-if-not #'ct:tensorp inputs))))
   (when (getf options :accumulate) (error "GPU operations do not support widened accumulation"))
   (let ((device (gpu:gpu-array-device storage)))
-    (dolist (tensor (append (remove-if-not #'ct:tensorp inputs) (when out (list out))))
-      (unless (and (typep (ct:tensor-storage tensor) 'gpu:gpu-array)
-                   (eq (tensor-device tensor) device))
-        (error "GPU operations require tensors on one device; transfer tensors explicitly"))
-      (tensor-view tensor))
+    (validate-device-operands device out inputs)
     (dolist (input (remove-if-not #'ct:tensorp inputs))
       (unless (eq (ct:tensor-dtype input) :f32) (error "GPU computation requires :F32")))
     (when (member operation '(:matmul :dot))
@@ -84,3 +80,8 @@
                                   (:argmin #'red:argmin!) (:argmax #'red:argmax!))
                                 target input :axis axes :keepdims (getf parameters :keepdims))))
                     (gpu:synchronize device)))))))
+
+(defmethod ct:resolve-storage-operation ((storage gpu:gpu-array) operation out inputs options)
+  (if (or (assoc operation *elementwise-operations*) (member operation '(:convert :dequantize)))
+      (resolve-device-elementwise storage operation out inputs options)
+      (resolve-device-axis-operation storage operation out inputs options)))

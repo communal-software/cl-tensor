@@ -7,7 +7,7 @@
   (and (equalp (ct:tensor-shape expected) (ct:tensor-shape actual))
        (eq (ct:tensor-dtype expected) (ct:tensor-dtype actual))
        (every (lambda (x y)
-                (if (eq (ct:tensor-dtype expected) :s64) (= x y)
+                (if (not (member (ct:tensor-dtype expected) '(:f32 :f64))) (= x y)
                     (<= (abs (- x y)) (* 1d-4 (max 1d0 (abs x) (abs y))))))
               (host-values expected) (host-values actual))))
 
@@ -22,9 +22,13 @@
   (symbol-function (find-symbol (format nil "~A!" operation) :cl-tensor)))
 
 (defvar *forbid-download* nil)
+(defvar *allow-status-download* nil)
 (defmethod gpu:device-load :before ((device cl-gpu/metal::metal-device) buffer sequence type offset)
-  (declare (ignore buffer sequence type offset))
-  (when *forbid-download* (error "Unexpected host download during GPU computation")))
+  (declare (ignore buffer offset))
+  (when (and *forbid-download*
+             (not (and *allow-status-download* (= 1 (length sequence))
+                       (eq type (gpu:parse-type 'gpu:u32)))))
+    (error "Unexpected host download during GPU computation")))
 
 (test metal-operations-match-cpu-for-layouts-and-axis-sets
   (let ((base (ct:from-data (loop for i below 120 collect (+ 0.8f0 (* 0.02f0 (mod i 13)))))))

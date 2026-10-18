@@ -27,9 +27,9 @@ Functions below belong to `cl-tensor/gpu`.
 | `(free-device-tensor tensor)` | Release the tensor's GPU array; return NIL |
 | `(with-device-tensor (name form) ...)` | Bind a device tensor and release it on exit |
 
-Storage supports `:f32` and `:s64`. Omitted `:device` uses cl-gpu's current device. Ordinary `make-tensor`, `zeros` and other constructors allocate CPU storage, including after the GPU system loads.
+Storage supports `:f32`, `:f16`, `:bf16` and signed/unsigned 8-, 16-, 32- and 64-bit integers (`:s8` through `:s64`, `:u8` through `:u64`). Omitted `:device` uses cl-gpu's current device. Ordinary `make-tensor`, `zeros` and other constructors allocate CPU storage, including after the GPU system loads.
 
-Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguous CPU inputs pack their logical values first. Noncontiguous downloads gather on the device before one bulk download. Neither transfer performs dtype conversion.
+Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguous CPU inputs pack their logical values first. Noncontiguous downloads gather on the device before one bulk download. Neither transfer performs dtype conversion. Half-format transfers preserve raw 16-bit encodings, including NaN payloads and signed zero.
 
 `tensor-storage` returns a `cl-gpu:gpu-array`. GPU storage has no scalar read/write access: download before calling `tref` or assigning elements.
 
@@ -41,17 +41,39 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 | `argmin`, `argmax` | F32 input; signed 64-bit result |
 | `softmax`, `rmsnorm` | F32 input and result; scalar or device tensor RMSNorm weights |
 | `matmul` | F32 vectors, matrices and broadcast batches; device-resident results |
+| Arithmetic, bounds, `negate`, `abs` | F32 and integer inputs/results; integer arithmetic wraps |
+| `sqrt`, `reciprocal`, exp/log, trigonometric functions and activations | F32 input/result |
+| `compare`, `select` | U8 comparison masks; selection accepts any nonzero mask byte |
+| `astype`, `dequantize` | Explicit device conversion; independent device result |
 | Matching `!` forms | Write a matching destination on the same device |
 | `copy-tensor`, copying `reshape` | Independent device copy, retaining dtype |
 | Metadata views | Share storage; offsets and signed/zero input strides work |
 
 [Reduction](reductions.md) axis, `keepdims`, empty-group and logical index rules apply. [Normalization](normalization.md) axis and weight-broadcasting rules apply. An empty axis vector selects no axes; NIL selects all axes.
 
-Computation accepts only f32. `:accumulate :f64` signals an error. S64 supports storage, copying and downloads of arg results, but no arithmetic. Floating-point arithmetic uses upstream GPU kernels; results need not be bit-identical to CPU results.
+Reductions, normalization and matrix products require f32 inputs. `:accumulate :f64` signals an error. F16 and BF16 remain storage-only: convert to f32 before arithmetic. Floating-point arithmetic uses upstream GPU kernels; results need not be bit-identical to CPU results.
 
-All tensor operands and a supplied destination must occupy the same device. Host tensor weights, CPU destinations and tensors on another device signal errors. Scalar weights are accepted. Use explicit transfers to cross the CPU/device boundary.
+All tensor operands and a supplied destination must occupy the same device. Host tensor weights, CPU destinations and tensors on another device signal errors. Scalar operands and weights are accepted. Use explicit transfers to cross the CPU/device boundary.
 
 Calls wait for completion before returning. Computation reads inputs before destination writes, including aliased weights and shifted input/output views. Validation and computation errors leave a destination unchanged; a failure during the final copy may partially update it.[^staging]
+
+## Elementwise operations and conversion
+
+[Elementwise](elementwise.md) broadcasting, scalar coercion, mask and dtype rules apply. Numeric tensor operands have identical dtypes. Scalar-only destination calls use the destination as numeric context; `select` with two scalar branches requires `:dtype`.
+
+```lisp
+(cl-tensor/gpu:with-device-tensor
+    (input (cl-tensor/gpu:to-device (cl-tensor:from-data '(1 2 3))))
+  (cl-tensor/gpu:with-device-tensor (mask (cl-tensor:compare :gt input 1))
+    (cl-tensor/gpu:with-device-tensor (chosen (cl-tensor:select mask input 0))
+      (cl-tensor/gpu:with-device-tensor (encoded (cl-tensor:astype chosen :bf16))
+        (cl-tensor/gpu:from-device encoded)))))
+;; BF16 CPU tensor; values are raw encoded bits
+```
+
+`astype` preserves shape, accepts all four [rounding modes](conversion.md), clamps integer narrowing and float-to-integer overflow, and copies raw bits for matching dtypes. F16/BF16 conversion pairs require real floating formats; use f32 as an intermediate for integer conversion. `dequantize` uses the same conversion path, defaulting to f32. F64 and complex device storage are unsupported.
+
+Integer division truncates toward zero; signed minimum divided by -1 wraps. Zero integer divisors, NaN-to-integer conversion and invalid tensor clamp bounds signal `cl-gpu:gpu-error`. Destination forms preserve the destination on these computation failures.[^status]
 
 ## Lifetime
 
@@ -89,9 +111,12 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 ## Limitations
 
-- Elementwise operations, conversion, fusion, joins and gather lack GPU dispatch; extra storage dtypes are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
+- Fusion, joins and gather lack GPU dispatch; f64 and complex storage are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
 - Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).
 - Upstream kernels use one threadgroup per reduction group and upload layout metadata per call: [cl-gpu #74](https://github.com/communal-software/cl-gpu/issues/74), [cl-gpu #49](https://github.com/communal-software/cl-gpu/issues/49).
+- Generic elementwise indexing decodes every axis per element: [cl-gpu #76](https://github.com/communal-software/cl-gpu/issues/76).
 
 [^staging]: Destination forms compute into independent GPU storage, wait for successful completion, then copy into the destination and wait again. Tensor values stay on the device throughout computation and copying; layout metadata is uploaded from the host. The CPU executor hook does not schedule GPU kernels.
+
+[^status]: Checked integer division, float-to-integer conversion and tensor clamp bounds download a single u32 error flag. Operand and result values stay on the device. Scalar-only arithmetic and selection create a temporary rank-zero device operand for the upstream kernel context. Floating exceptional values follow Metal; CPU floating-point trap settings do not control GPU arithmetic.
