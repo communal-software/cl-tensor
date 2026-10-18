@@ -81,7 +81,24 @@
                                 target input :axis axes :keepdims (getf parameters :keepdims))))
                     (gpu:synchronize device)))))))
 
+(defun resolve-device-take (storage out inputs options)
+  (declare (ignore options))
+  (let ((device (gpu:gpu-array-device storage)))
+    (validate-device-operands device out inputs)
+    (device-element (ct:tensor-dtype (first inputs)))
+    ;; TODO: allocating gather retains an extra result buffer; adopt upstream-owned results (#22).
+    (let ((execute (lambda (result operands parameters)
+                     (gather:gather! (tensor-view result) (tensor-view (first operands))
+                                     (tensor-view (second operands)) :axis (getf parameters :axis))
+                     (gpu:synchronize device)
+                     result)))
+      (values (ct:tensor-dtype (first inputs)) execute
+              (lambda (target operands parameters)
+                (declare (ignore target operands parameters))
+                execute)))))
+
 (defmethod ct:resolve-storage-operation ((storage gpu:gpu-array) operation out inputs options)
-  (if (or (assoc operation *elementwise-operations*) (member operation '(:convert :dequantize)))
-      (resolve-device-elementwise storage operation out inputs options)
-      (resolve-device-axis-operation storage operation out inputs options)))
+  (cond ((eq operation :take) (resolve-device-take storage out inputs options))
+        ((or (assoc operation *elementwise-operations*) (member operation '(:convert :dequantize)))
+         (resolve-device-elementwise storage operation out inputs options))
+        (t (resolve-device-axis-operation storage operation out inputs options))))

@@ -32,7 +32,7 @@ A view is valid when:
 
 ## Extension points
 
-Dtypes are registered CLOS descriptors. Storage kinds implement logical length, type and optional scalar access. Numerical operations try storage-specific selection, then dtype selection, before built-in execution; accepted extension out-forms stage independent results and copy through the dtype protocol, or use an explicitly selected alias-safe, failure-atomic direct executor. See [dtype and storage extensions](extensions.md).
+Dtypes are registered CLOS descriptors. Storage kinds implement logical length, type and optional scalar access. Numerical operations try storage-specific selection, then dtype selection, before built-in execution; accepted extension out-forms stage independent results and copy through the dtype protocol, or use an explicitly selected alias-safe direct executor. Validation and computation failures preserve destinations; final-copy failures can leave partial writes. See [dtype and storage extensions](extensions.md).
 
 Autograd attaches through a wrapper around a tensor, or through a subtype defined with `(:include tensor)`. Code that accepts a `tensor` accepts both.
 
@@ -44,7 +44,7 @@ GPU reductions and normalization pass tensor dimensions, signed strides and offs
 
 ## Shape and reduction execution
 
-Shape operations build validated views; reshape copies when its strides cannot represent the requested logical order. Concatenate, stack and take allocate independent storage. Gather copies selected slices through the dtype copy protocol; its out-form stages the result before writing the destination.
+Shape operations build validated views; reshape copies when its strides cannot represent the requested logical order. Concatenate, stack and take allocate independent storage. CPU gather copies selected slices through the dtype copy protocol. GPU gather delegates to public cl-gpu gather kernels without downloading tensor values. Both out-forms stage the result before writing the destination.
 
 Reductions group retained and reduced axes into rows, packing when inner rows are not contiguous. Compatible real float batches execute natively; integer and complex batches use upstream typed reducers. Destination-writing reductions compute before scattering, so overlapping views read their original values.
 

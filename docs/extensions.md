@@ -71,13 +71,14 @@ Specialize `resolve-operation (dtype operation inputs options)`. Return the resu
 
 The executor has signature `(out inputs options)`. It fills all logical result elements, reads inputs without modifying them, and respects their validated layouts. Its return value is ignored. By default, the core allocates an independent result and checks a supplied destination's shape, dtype, uniqueness and copy support before invoking the executor. Destination-writing calls copy the completed result into the caller's destination, preserving aliased inputs.[^staging]
 
-Core computes broadcasting, matmul and reduction shapes. Axes in hook options are normalized, sorted lists of nonnegative axis numbers; an empty list means no axes. Extensions choose the result dtype, including mixed matmul such as packed weights × `:f32` activations → `:f32`.
+Core computes broadcasting, matmul and reduction shapes. Reduction and normalization axes in hook options are normalized, sorted lists of nonnegative axis numbers; an empty list means no axes. Gather uses one normalized nonnegative integer axis. Extensions choose the result dtype, including mixed matmul such as packed weights × `:f32` activations → `:f32`.
 
 | Operation keys | Inputs and options |
 |---|---|
 | Elementwise public names as keywords | Operands in public argument order; `:dtype`, `:operator` |
 | `:sum`, `:mean`, `:prod`, `:minimum`, `:maximum`, `:argmin`, `:argmax` | One tensor; `:axis`, `:keepdims`, `:accumulate` |
 | `:softmax`, `:rmsnorm` | Input, then optional RMSNorm weights; `:axis`, `:accumulate`, `:epsilon` |
+| `:take` | Input and integer index tensors; `:axis`; result dtype matches input |
 | `:matmul`, `:dot` | Left and right tensors; no options |
 | `:convert` | Input tensor; requested `:dtype`, `:rounding` |
 | `:dequantize` | Input tensor; requested `:dtype` |
@@ -112,13 +113,13 @@ Return an optional third function to inspect a supplied destination after core c
 (values :my-packed8 #'staged-negate! #'select-direct-negate)
 ```
 
-The direct executor has signature `(out inputs options)` and fills the supplied destination. It guarantees the same result as reading all inputs before any destination writes, including hidden storage aliases. If it signals an error, the destination remains unchanged. Core trusts this declaration; it does not inspect opaque layouts or add snapshots. Its return value is ignored, and the public out-form returns `out`.[^direct]
+The direct executor has signature `(out inputs options)` and fills the supplied destination. It guarantees the same result as reading all inputs before any destination writes, including hidden storage aliases. Validation and computation errors leave the destination unchanged. An executor that stages internally follows the final-copy failure contract when committing its completed result.[^staging] Core trusts this declaration; it does not inspect opaque layouts or add snapshots. Its return value is ignored, and the public out-form returns `out`.[^direct]
 
 The [opaque example](../examples/extensions.lisp) accepts separate buffers and exact aliases for negation, checks every code for overflow before writing, and declines shifted aliases. A declined direct selector uses the ordinary executor with full-result staging. Existing two-value selectors also use staging.
 
 ## Fallback and example
 
-When all selectors decline, built-in dtypes use existing kernels. Readable custom storage uses ordinary-array backend fallback. Elementwise operations pack broadcasted logical inputs in reusable buffers of at most 4,096 elements per tensor operand. Destination writes retain an independent full result and copy it only after all chunks succeed. Other operation families pack complete inputs. Custom dtypes without accepting methods signal `unsupported-operation`; computation does not implicitly dequantize.
+When all selectors decline, built-in dtypes use existing kernels. Readable custom storage uses ordinary-array backend fallback. Elementwise operations pack broadcasted logical inputs in reusable buffers of at most 4,096 elements per tensor operand. Destination writes retain an independent full result and copy it only after all chunks succeed. Gather retains its storage-specific slice-copy fallback. Other operation families pack complete inputs. Numerical operations on custom dtypes without accepting methods signal `unsupported-operation`; computation does not implicitly dequantize.
 
 Ordinary arrays retain built-in dtype inference even after extensions register scalar types. Encoded/custom storage overrides `storage-dtype` or supplies `:dtype` explicitly.
 
@@ -139,4 +140,4 @@ See [dispatch measurements](extensions-performance.md) for built-in storage and 
 
 [^registry]: Descriptor replacement requires a fresh Lisp image. Reloading methods on an existing descriptor class is supported; duplicate registration does not replace its metadata. Concurrent registry mutation is outside the protocol.
 [^staging]: Executor failures leave a supplied destination unchanged. A failing final copy method can partially update it; extensions validate their copy prerequisites before writing.
-[^direct]: The extension owns any workspace and transaction mechanism. Opting into direct execution does not establish a bounded-memory guarantee. Validate every condition that can fail before writing, or provide rollback.
+[^direct]: The extension owns any workspace and transaction mechanism. Opting into direct execution does not establish a bounded-memory guarantee. Validate every computation condition that can fail before writing, or provide rollback. Internally staged GPU gather permits partial writes after final-copy submission; its completion wait reports errors before returning.

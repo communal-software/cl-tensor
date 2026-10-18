@@ -107,11 +107,15 @@ sbcl --non-interactive --eval '(require :asdf)' \
 | Suite | Coverage |
 |---|---|
 | Mock device | All storage dtypes, bulk/raw transfers, placement, lifetime, validation, elementwise/scalar/conversion dispatch, matmul batch grouping/window offsets and failure cleanup |
+| Gather protocol | Dtype/index combinations, explicit placement, status-only downloads, empty indices, synchronous return and failure cleanup |
+| Gather Metal | Independent coordinate references, raw half bits, bounds/extreme indices, windows/strides, aliases and destination padding |
 | Fusion protocol | Inline/named dispatch, placement/dtype errors, cache reuse, concurrent first use, redefinition and compilation/launch/completion cleanup |
 | Fusion Metal | Independent scalar arithmetic/reduction references, lazy selection, nested groups, windows/strides, aliases, padding guards, empty/scalar outputs and staged failures |
 | Metal | CPU and independent references for elementwise, masks, integer arithmetic/conversion, half-format bits, reductions, normalization and matmul; layouts, windows, aliases, errors and scalar results |
 
 Matmul checks include vector products, broadcast batches, aliases across batches, irregular destinations with guard values, and zero-contraction products. Computation and device-copy checks forbid operand/result downloads; checked operations permit the documented single-word error status. Integers and encoded storage compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+
+Run `examples/gpu-gather.lisp` for batched embedding lookup with explicit transfers and cleanup.
 
 Run `examples/gpu-fusion.lisp` for inline/named expressions, nested reductions and in-place destinations. Measure synchronous allocating/out fusion against composed GPU operations with `sbcl --non-interactive --load tests/gpu-fusion-bench.lisp`; see [GPU fusion measurements](gpu-fusion-performance.md).
 
@@ -132,11 +136,11 @@ SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusi
 | Implementation/backend | Passing checks |
 |---|---:|
 | SBCL default/native | 136,268 |
-| SBCL Lisp | 136,268 |
-| ECL | 135,923 |
+| SBCL Lisp after GPU loading | 136,238 |
+| ECL | 136,407 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
 
-The SBCL and ECL GPU protocol suites each pass 674 checks; real Metal execution passes 3,838 checks on both Lisps with MPS enabled and again with MPS disabled. These include elementwise and fusion dispatch, scalar operands, all conversion pairs, raw half encodings, integer wrapping, lazy nested reductions, concurrent fusion plans and staged failures. The CPU Lisp-backend suite also passes after the GPU extension loads.
+The SBCL and ECL GPU protocol suites each pass 1,899 checks; real Metal execution passes 10,192 checks on both Lisps with MPS enabled and again with MPS disabled. These include gather, elementwise and fusion dispatch, scalar operands, all conversion pairs, every raw half encoding, integer wrapping, lazy nested reductions, concurrent fusion plans and staged failures. The CPU Lisp-backend suite also passes after the GPU extension loads. The embedding example passes on both Lisps.
 
 Normal and forced ASDF loading pass in a fresh SBCL process. Repeated runs advance the random state and may execute a different number of generated checks.[^seed]
 

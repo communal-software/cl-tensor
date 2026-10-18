@@ -55,9 +55,9 @@ Compatible padded, stepped, reversed and zero-stride layouts can reshape without
 ;; shape: (2 2 2); values: 5, 6, 1, 2, 3, 4, 5, 6
 ```
 
-Input and index tensors support padded, reversed and zero-stride views, including foreign storage. Gathering preserves the input dtype and copies raw `:f16`/`:bf16` bits. Custom storage uses its dtype's view validation and copy methods; packed formats may reject slices that break their block layout.
+Input and index tensors support padded, reversed and zero-stride views, including foreign storage and GPU-array windows. GPU gather requires input, indices and destination on one device; upload indices explicitly. Results retain the input device. Gathering preserves the input dtype and copies raw `:f16`/`:bf16` bits. Custom storage uses its dtype's view validation and copy methods; packed formats may reject slices that break their block layout.
 
-`take!` requires the exact result shape and input dtype, nonoverlapping logical destination elements, and dtype copy support. It validates every index and gathers into independent storage before copying to `out`, preserving input/index aliases and leaving the destination unchanged on gathering failures.[^gather-copy]
+`take!` requires the exact result shape and input dtype, nonoverlapping logical destination elements, and dtype copy support. It validates every index and gathers into independent storage before copying to `out`, preserving input/index aliases and leaving the destination unchanged on gathering failures.[^gather-copy] GPU bounds errors use `cl-gpu:gpu-error` and report the axis and its length without downloading index values. See [device gather](device.md#gather) for transfers and completion.
 
 ## Slicing
 
@@ -96,8 +96,8 @@ Split accepts a positive section count dividing the axis evenly, or ordered cut 
 ## Limitations
 
 - Slicing supports basic integer and range selectors. Use `take` for axis-based integer gathers. Boolean masks, general advanced indexing, ellipsis and insertion selectors are outside this API.
-- Gather out-forms use full-result scratch: [#11](https://github.com/communal-software/cl-tensor/issues/11).
+- CPU gather out-forms use full-result scratch: [#11](https://github.com/communal-software/cl-tensor/issues/11).
 
 [^strides]: Reshape groups compatible stride chunks, ignoring singleton-axis strides. A new dimension cannot cross a discontinuity between chunks. Views retain their storage owner; callers keep foreign memory valid for the view's lifetime.
 
-[^gather-copy]: A custom dtype's final destination copy retains its own failure contract. Result staging and normalized-index storage require O(result size + index count) workspace; no upstream gather kernel is required.
+[^gather-copy]: A custom dtype's final destination copy retains its own failure contract. Result staging and normalized-index storage require O(result size + index count) workspace. CPU gather uses slice copies; GPU gather uses the public `cl-gpu/gather` API.

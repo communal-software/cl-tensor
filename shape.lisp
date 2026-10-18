@@ -192,13 +192,18 @@
   (check-type indices tensor)
   (unless (member (tensor-dtype indices) '(:s8 :u8 :s16 :u16 :s32 :u32 :s64 :u64))
     (error "TAKE indices require an integer dtype"))
+  (let* ((axis (normalize-axis axis (tensor-rank input)))
+         (shape (tensor-shape input)))
+    (values axis
+            (cl:concatenate 'vector (subseq shape 0 axis) (tensor-shape indices)
+                            (subseq shape (1+ axis))))))
+
+(defun normalize-take-indices (input indices axis)
   (unless (storage-readable-p (tensor-storage indices))
     (error 'unsupported-storage-access :storage (tensor-storage indices) :access :read))
-  (let* ((axis (normalize-axis axis (tensor-rank input)))
-         (shape (tensor-shape input))
-         (size (aref shape axis))
-         (normalized (make-array (tensor-size indices) :element-type 'fixnum))
-         (position 0))
+  (let ((size (aref (tensor-shape input) axis))
+        (normalized (make-array (tensor-size indices) :element-type 'fixnum))
+        (position 0))
     (call-with-offsets (tensor-shape indices) (list (tensor-strides indices))
                        (list (tensor-offset indices))
                        (lambda (offset)
@@ -208,10 +213,7 @@
                              (error "TAKE index ~D is outside axis ~D of size ~D" value axis size))
                            (setf (aref normalized position) index)
                            (incf position))))
-    (values axis
-            (cl:concatenate 'vector (subseq shape 0 axis) (tensor-shape indices)
-                            (subseq shape (1+ axis)))
-            normalized)))
+    normalized))
 
 (defun gather-slices (input indices axis shape normalized)
   (let ((result (make-tensor shape :dtype (tensor-dtype input))))
@@ -237,14 +239,22 @@
              (incf position))))))
     result))
 
+(defun tensor-take (out input indices axis)
+  (multiple-value-bind (axis shape) (prepare-take input indices axis)
+    (dispatch-operation
+     :take out (list input indices) (list :axis axis) (lambda () shape)
+     (lambda (target operands)
+       (destructuring-bind (input indices) operands
+         (let ((normalized (normalize-take-indices input indices axis)))
+           (when target (check-copy-destination target shape (tensor-dtype input)))
+           ;; TODO: CPU out-forms retain full-result scratch; gather into proven-disjoint storage (#11).
+           (let ((result (gather-slices input indices axis shape normalized)))
+             (if target (copy-storage! (find-dtype (tensor-dtype input)) target result) result)))))
+     t)))
+
 (defun take (input indices &key (axis 0))
-  (multiple-value-bind (axis shape normalized) (prepare-take input indices axis)
-    (gather-slices input indices axis shape normalized)))
+  (tensor-take nil input indices axis))
 
 (defun take! (out input indices &key (axis 0))
   (check-type out tensor)
-  (multiple-value-bind (axis shape normalized) (prepare-take input indices axis)
-    (check-copy-destination out shape (tensor-dtype input))
-    ;; TODO: full-result scratch; gather directly into proven-disjoint storage (https://github.com/communal-software/cl-tensor/issues/11).
-    (copy-storage! (find-dtype (tensor-dtype input)) out
-                   (gather-slices input indices axis shape normalized))))
+  (tensor-take out input indices axis))

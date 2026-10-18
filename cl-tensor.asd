@@ -26,7 +26,7 @@
 
 (asdf:defsystem "cl-tensor/gpu"
   :description "Explicit GPU tensor storage and tensor operations"
-  :depends-on ("cl-tensor" "cl-gpu/reductions" "cl-gpu/blas" "cl-gpu/elementwise" "cl-gpu/expressions")
+  :depends-on ("cl-tensor" "cl-gpu/reductions" "cl-gpu/blas" "cl-gpu/elementwise" "cl-gpu/expressions" "cl-gpu/gather")
   :serial t
   :components ((:file "gpu/package")
                (:file "gpu/storage") (:file "gpu/elementwise")
@@ -37,7 +37,7 @@
   :depends-on ("cl-tensor/gpu" "cl-tensor/tests")
   :serial t
   :components ((:file "tests/gpu") (:file "tests/gpu-operations")
-               (:file "tests/gpu-elementwise") (:file "tests/gpu-fusion"))
+               (:file "tests/gpu-elementwise") (:file "tests/gpu-fusion") (:file "tests/gpu-gather"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-tests)
@@ -47,7 +47,7 @@
   :depends-on ("cl-tensor/gpu/tests" "cl-gpu/metal")
   :serial t
   :components ((:file "tests/gpu-metal") (:file "tests/gpu-elementwise-metal")
-               (:file "tests/gpu-fusion-metal"))
+               (:file "tests/gpu-fusion-metal") (:file "tests/gpu-gather-metal"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-metal-tests)

@@ -40,6 +40,7 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 | `sum`, `mean`, `prod`, `minimum`, `maximum` | F32 input and result |
 | `argmin`, `argmax` | F32 input; signed 64-bit result |
 | `softmax`, `rmsnorm` | F32 input and result; scalar or device tensor RMSNorm weights |
+| `take`, `take!` | Same-device integer indices; retain input dtype, device and raw bits |
 | `matmul` | F32 vectors, matrices and broadcast batches; device-resident results |
 | Arithmetic, bounds, `negate`, `abs` | F32 and integer inputs/results; integer arithmetic wraps |
 | `sqrt`, `reciprocal`, exp/log, trigonometric functions and activations | F32 input/result |
@@ -116,11 +117,21 @@ sbcl --non-interactive --load examples/device.lisp
 
 See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
+## Gather
+
+`take` and `take!` gather slices with the [shape API](shape.md#gather). Input and indices, plus the destination for `take!`, reside on the same device. Upload CPU indices explicitly. All eight integer index dtypes are accepted, including scalar and batched indices. Negative indices count from the end.
+
+Gather retains the input dtype and device, including raw f16/bf16 encodings. Signed/zero strides, GPU-array windows and unique irregular destinations are supported. Bounds failures signal `cl-gpu:gpu-error` with the axis and its length. Nonempty indices are checked even when another dimension makes the result empty.
+
+Only a single u32 error status is downloaded for nonempty indices; operand and result values stay on-device. Empty indices need no launch or status read. Calls wait for completion. `take!` consumes aliased input/index values before destination writes and preserves the destination on validation or gather-computation errors. Final-copy failures may leave partial output.[^gather]
+
+Run [the embedding example](../examples/gpu-gather.lisp) for explicit uploads, batched token lookup, allocating and destination forms, downloads and cleanup.
+
 ## Limitations
 
 - F64 and complex device storage are unsupported: [f64 #27](https://github.com/communal-software/cl-tensor/issues/27), [complex #28](https://github.com/communal-software/cl-tensor/issues/28).
-- Joins and gather lack GPU dispatch: [joins #29](https://github.com/communal-software/cl-tensor/issues/29), [gather #30](https://github.com/communal-software/cl-tensor/issues/30). Unsupported calls signal errors without implicit downloads.
-- Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
+- Joins lack GPU dispatch: [#29](https://github.com/communal-software/cl-tensor/issues/29). Unsupported calls signal errors without implicit downloads.
+- Calls synchronize, destination forms retain full-result scratch, allocating gather retains an extra result buffer, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).
 - Upstream kernels use one threadgroup per reduction group and upload layout metadata per call: [cl-gpu #74](https://github.com/communal-software/cl-gpu/issues/74), [cl-gpu #49](https://github.com/communal-software/cl-gpu/issues/49).
 - Generic elementwise indexing decodes every axis per element: [cl-gpu #76](https://github.com/communal-software/cl-gpu/issues/76).
@@ -128,3 +139,5 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 [^staging]: Destination forms compute into independent GPU storage, wait for successful completion, then copy into the destination and wait again. Tensor values stay on the device throughout computation and copying; layout metadata is uploaded from the host. The CPU executor hook does not schedule GPU kernels.
 
 [^status]: Checked integer division, float-to-integer conversion and tensor clamp bounds download a single u32 error flag. Operand and result values stay on the device. Scalar-only arithmetic and selection create a temporary rank-zero device operand for the upstream kernel context. Floating exceptional values follow Metal; CPU floating-point trap settings do not control GPU arithmetic.
+
+[^gather]: The adapter calls public `cl-gpu/gather:gather!` and synchronizes after its final copy. Upstream owns normalized indices, metadata, status and result staging, releasing scratch on success and errors. `take!` uses that staging directly; allocating `take` also has a dispatch-owned result buffer that is released on failure. Workspace is O(index count + result size). The final copy has no rollback guarantee after submission, including completion errors.
