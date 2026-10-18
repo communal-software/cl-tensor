@@ -1,6 +1,6 @@
 # Expression fusion
 
-`fuse` evaluates an elementwise expression without intermediate expression tensors. `fuse!` stages the result and copies it into a supplied destination. Both accept f32/f64 tensors, broadcast operands and preserve arbitrary signed strides.
+`fuse` evaluates an elementwise expression without intermediate expression tensors. `fuse!` stages the result and copies it into a supplied destination. CPU fusion accepts f32/f64 tensors; [GPU fusion](#device-execution) accepts f32 device tensors. Both broadcast operands and preserve arbitrary signed strides.
 
 ```lisp
 (let ((a (ct:from-data '(1 2 3)))
@@ -25,7 +25,7 @@
 
 Leaves are variable names or real constants. Inline variable leaves are captured once, in first-occurrence order. Bind function-call results outside the expression. Named definitions require every variable leaf to appear in the argument list; unused arguments do not affect broadcasting.
 
-At least one referenced operand is a tensor. Tensor operands share one f32/f64 dtype; scalar variables are coerced to that precision. Computation uses the input precision. Kernels compile with their containing code and are reused between calls.[^loading]
+At least one referenced operand is a tensor. Tensor operands share one supported dtype; scalar variables are coerced to that precision. Computation uses the input precision. CPU kernels compile with their containing code; GPU plans initialize on first device use and retain reusable kernels.[^loading]
 
 ## Expressions
 
@@ -41,7 +41,7 @@ At least one referenced operand is a tensor. Tensor operands share one f32/f64 d
 
 The corresponding tensor arithmetic/math names also work, for example `ct:add`, `ct:multiply` and `ct:exp`. Unsupported operators and invalid expression kinds signal errors during macro expansion. Masks are internal to selection; fusion returns numeric tensors. Selection evaluates only the chosen branch per element on each backend.
 
-`(+ (* a b) c)` uses separate multiplication and addition rounding. FMA requires the explicit form above. Floating-point traps and exceptional values follow the active trivial-simd backend; results need not be bit-identical across backends.
+`(+ (* a b) c)` uses separate multiplication and addition rounding. FMA requires the explicit form above. CPU floating-point traps and exceptional values follow the active trivial-simd backend. Device expressions follow Metal arithmetic, including NaNs for evaluated negative square roots. Results need not be bit-identical across backends.
 
 ## Reduction groups
 
@@ -62,15 +62,36 @@ Top-level arg reducers return `:s64` logical indices within the selected axes, e
 
 Empty sum groups return zero; product groups return one. Top-level extrema and arg reducers reject empty groups when an output is required. Empty vector results and identity reductions skip nested evaluation.
 
-The [executor hook](execution.md) schedules independent reduction groups. Plain elementwise expressions remain sequential.
+The CPU [executor hook](execution.md) schedules independent reduction groups. Plain elementwise expressions remain sequential.
 
 ## Destinations and storage
 
 Out-forms validate shape, dtype, uniqueness and copy support before computing. Inputs are read before any destination copy, including shifted and hidden storage aliases. Computation or input-read errors leave the destination unchanged; an error in a custom destination's copy method follows that method's guarantees.
 
-Built-in arrays and foreign views use direct contiguous slices or compatible row batches. Other layouts pack input values. Readable custom storage with a built-in f32/f64 dtype works through scalar access; custom destinations require copy support. Fusion bypasses custom operation selectors.
+On the CPU, built-in arrays and foreign views use direct contiguous slices or compatible row batches. Other layouts pack input values. Readable custom storage with a built-in f32/f64 dtype works through scalar access; custom destinations require copy support. Fusion bypasses custom operation selectors.
 
-Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load examples/fusion.lisp`. See [measurements](fusion-performance.md) for timing and allocation.
+Run [the CPU example](../examples/fusion.lisp) with `sbcl --non-interactive --load examples/fusion.lisp`. See [measurements](fusion-performance.md) for timing and allocation.
+
+## Device execution
+
+Load `cl-tensor/gpu` and `cl-gpu/metal`. The same expressions, reducers and keyword arguments execute on f32 device tensors; top-level arg reducers return s64 device tensors. Results stay on the input device. All referenced tensor operands and a destination share one device; transfers are explicit.
+
+```lisp
+(cl-tensor/gpu:with-device-tensor
+    (a (cl-tensor/gpu:to-device (ct:from-data '((1 2 3) (4 5 6)))))
+  (cl-tensor/gpu:with-device-tensor
+      (result (ct:fuse (ct:sum (* a a)) :axis -1))
+    (cl-tensor/gpu:from-device result)))
+;; shape (2), values 14, 77
+```
+
+Broadcasting, signed/zero input strides, GPU-array windows, empty outputs and rank-zero results retain their tensor contracts. Destinations require unique addresses. Calls wait for completion; operand and result values stay on the device throughout computation and destination copying. The CPU executor hook does not schedule GPU fusion.
+
+Selection evaluates only the selected branch. A nested reduction demanded by any selected element evaluates its operand across that complete group; groups with no demand skip it. Reductions may require multiple launches and temporary device buffers.[^device-plan]
+
+Destination calls stage a complete result, including exact in-place and shifted aliases. Validation, compilation, computation-launch and completion failures leave the destination unchanged. A failure during the final copy may partially update it. Per-call scratch is released on success or failure.
+
+Run `sbcl --non-interactive --load examples/gpu-fusion.lisp` for named multiply-add, row reductions, nested softmax and in-place output. See [GPU measurements](gpu-fusion-performance.md) for complete-call comparisons.
 
 ## Limitations
 
@@ -79,8 +100,13 @@ Run [the example](../examples/fusion.lisp) with `sbcl --non-interactive --load e
 - Mask outputs and count/any/all reductions are unsupported: [#17](https://github.com/communal-software/cl-tensor/issues/17).
 - All reducers share one axis set: [#19](https://github.com/communal-software/cl-tensor/issues/19).
 - Custom dtypes and arbitrary Lisp calls are unsupported.
-- Out-forms stage complete results. Packed reduction operands and scalar-variable operands retain one complete row per worker; irregular nested vector results also use a row buffer. Plain elementwise packing is bounded to 4,096 elements per operand. Bounded multi-pass execution and transactional output are tracked in [#13](https://github.com/communal-software/cl-tensor/issues/13).
+- GPU fusion supports f32 computation on Metal. F16/BF16 remain storage-only; convert explicitly before fusion. F64 device storage is tracked in [#27](https://github.com/communal-software/cl-tensor/issues/27).
+- GPU plan lookup uses a shared publication lock; concurrent-call contention is tracked in [#31](https://github.com/communal-software/cl-tensor/issues/31). Kernel execution runs outside this lock.
+- GPU reductions retain full-shape operand and demand-mask scratch: [upstream #83](https://github.com/communal-software/cl-gpu/issues/83). Synchronous destination staging remains tracked in [#22](https://github.com/communal-software/cl-tensor/issues/22).
+- CPU out-forms stage complete results. Packed reduction operands and scalar-variable operands retain one complete row per worker; irregular nested vector results also use a row buffer. Plain elementwise packing is bounded to 4,096 elements per operand. Bounded multi-pass execution and transactional output are tracked in [#13](https://github.com/communal-software/cl-tensor/issues/13).
 - Strided packing and per-row kernel setup can outweigh saved expression tensors. Direct N-D expression execution is tracked in [#14](https://github.com/communal-software/cl-tensor/issues/14).
 - Upstream `define-kernel` is experimental. Nested reductions require multiple passes and may recompute expressions; see [upstream limitations](https://github.com/communal-software/trivial-simd/blob/trunk/docs/kernel-passes.md#limitations).
 
 [^loading]: Native programs initialize lazily on first use. Inline macros also work through `eval`; this does not introduce per-call compilation inside a compiled call site. Named allocating and out-functions share a kernel closure. Retained functions remain callable after redefinition.
+
+[^device-plan]: The optional adapter delegates to the public `cl-gpu/expressions` API. Inline call sites retain one plan; named allocating/out functions share one. Shape, strides, axes and scalar values reuse compatible compiled variants. Concurrent calls use independent scratch, and plans retain no input or destination buffers. Retained functions remain callable after redefinition. Compilation failures remain retryable.

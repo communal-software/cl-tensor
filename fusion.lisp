@@ -1,5 +1,22 @@
 (in-package #:cl-tensor)
 
+(defstruct fusion-program function keys parameters body reducers outer device-plan)
+
+(defgeneric execute-storage-fusion (storage program operands out axis keepdims))
+
+(defmethod execute-storage-fusion (storage program operands out axis keepdims)
+  (declare (ignore storage program operands out axis keepdims))
+  (values nil nil))
+
+(defun execute-fusion (program operands out axis keepdims)
+  (dolist (tensor (if out (append (remove-if-not #'tensorp operands) (list out))
+                     (remove-if-not #'tensorp operands)))
+    (multiple-value-bind (result handled)
+        (execute-storage-fusion (tensor-storage tensor) program operands out axis keepdims)
+      (when handled (return-from execute-fusion result))))
+  (run-fusion (fusion-program-function program) (fusion-program-keys program) operands
+              (fusion-program-reducers program) (fusion-program-outer program) out axis keepdims))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun fusion-operator (operator)
     (case operator
@@ -73,13 +90,19 @@
                     (intern (format nil "~A-ROW-STRIDE" parameter) :keyword)))
             parameters))
 
+  (defun fusion-program-form (body parameters reducers outer)
+    (let ((kernel (gensym "FUSED-KERNEL")))
+      `(progn
+         (trivial-simd:define-kernel ,kernel ,parameters ,body)
+         (make-fusion-program :function (symbol-function ',kernel)
+                              :keys ',(fusion-keys parameters) :parameters ',parameters
+                              :body ',body :reducers ',reducers :outer ',outer))))
+
   (defun fusion-call-form (expression out axis keepdims)
     (multiple-value-bind (body leaves parameters reducers outer) (parse-fusion expression)
-      (let ((kernel (gensym "FUSED-KERNEL")))
-        `(run-fusion
-          (load-time-value
-           (progn (trivial-simd:define-kernel ,kernel ,parameters ,body) (symbol-function ',kernel)))
-          ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims)))))
+      `(execute-fusion
+        (load-time-value ,(fusion-program-form body parameters reducers outer))
+        (list ,@leaves) ,out ,axis ,keepdims))))
 
 (defmacro fuse (expression &key axis keepdims)
   (fusion-call-form expression nil axis keepdims))
@@ -101,19 +124,18 @@
   (multiple-value-bind (body leaves parameters reducers outer) (parse-fusion expression)
     (unless (every (lambda (leaf) (member leaf arguments)) leaves)
       (error "Tensor kernel expression references an undeclared argument"))
-    (let ((kernel (gensym "TENSOR-KERNEL")) (function (gensym "FUNCTION")) (out (gensym "OUT"))
+    (let ((program (gensym "PROGRAM")) (out (gensym "OUT"))
           (axis (gensym "AXIS")) (keepdims (gensym "KEEPDIMS"))
           (out-name (intern (format nil "~A!" name) (or (symbol-package name) *package*)))
           (unused (set-difference arguments leaves)))
-      `(let ((,function (progn (trivial-simd:define-kernel ,kernel ,parameters ,body)
-                              (symbol-function ',kernel))))
+      `(let ((,program ,(fusion-program-form body parameters reducers outer)))
          (defun ,name (,@arguments &key ((:axis ,axis)) ((:keepdims ,keepdims)))
            ,@(when unused `((declare (ignore ,@unused))))
-           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer nil ,axis ,keepdims))
+           (execute-fusion ,program (list ,@leaves) nil ,axis ,keepdims))
          (defun ,out-name (,out ,@arguments &key ((:axis ,axis)) ((:keepdims ,keepdims)))
            ,@(when unused `((declare (ignore ,@unused))))
            (check-type ,out tensor)
-           (run-fusion ,function ',(fusion-keys parameters) (list ,@leaves) ',reducers ',outer ,out ,axis ,keepdims))))))
+           (execute-fusion ,program (list ,@leaves) ,out ,axis ,keepdims))))))
 
 (defun fusion-slice (function parameters arrays starts destination destination-start count outer)
   (let ((options (loop for (start-key) in parameters for start in starts append (list start-key start))))

@@ -1,0 +1,51 @@
+(in-package #:cl-tensor/gpu)
+
+(defvar *fusion-plan-lock* (bordeaux-threads:make-lock "tensor fusion plans"))
+
+(defun device-expression (body)
+  (if (atom body) body
+      (cons (ecase (first body)
+              (cl:+ :add) (cl:- :subtract) (cl:* :multiply) (cl:/ :divide)
+              (cl:min :min) (cl:max :max) (cl:abs :abs) (cl:sqrt :sqrt)
+              (cl:exp :exp) (cl:sin :sin) (cl:cos :cos) (cl:log :log) (cl:tanh :tanh)
+              (trivial-simd:sigmoid :sigmoid) (trivial-simd:fma :fma)
+              (cl:= :eq) (cl:/= :ne) (cl:< :lt) (cl:<= :le) (cl:> :gt) (cl:>= :ge)
+              (trivial-simd:select :select)
+              (trivial-simd:sum :sum) (trivial-simd:prod :prod)
+              (trivial-simd:minimum :minimum) (trivial-simd:maximum :maximum)
+              (trivial-simd:argmin :argmin) (trivial-simd:argmax :argmax))
+            (mapcar #'device-expression (rest body)))))
+
+(defun device-fusion-plan (program)
+  ;; TODO: shared lookup lock; use per-program locks if contention matters (#31).
+  (bordeaux-threads:with-lock-held (*fusion-plan-lock*)
+    (or (ct::fusion-program-device-plan program)
+        (setf (ct::fusion-program-device-plan program)
+              (ex:make-expression-plan (ct::fusion-program-parameters program)
+                                       (device-expression (ct::fusion-program-body program)))))))
+
+(defmethod ct::execute-storage-fusion ((storage gpu:gpu-array) program operands out axis keepdims)
+  (validate-device-operands (gpu:gpu-array-device storage) out operands)
+  (let ((tensors (remove-if-not #'ct:tensorp operands)))
+    (unless tensors (error "Fusion requires a tensor operand"))
+    (unless (every (lambda (tensor) (eq (ct:tensor-dtype tensor) :f32)) tensors)
+      (error "GPU fusion requires :F32 tensors")))
+  (let* ((plan (device-fusion-plan program))
+         (inputs (mapcar (lambda (input) (if (ct:tensorp input) (tensor-view input) input)) operands)))
+    (multiple-value-bind (shape element device)
+        (ex:expression-result-info plan inputs :axis axis :keepdims keepdims)
+      (declare (ignore device))
+      (let ((dtype (if (eq element 'gpu:i64) :s64 :f32)))
+        (if out
+            (progn
+              (ct::check-copy-destination out shape dtype)
+              (ex:execute-expression! (tensor-view out) plan inputs :axis axis :keepdims keepdims)
+              (values out t))
+            (let* ((view (ex:execute-expression plan inputs :axis axis :keepdims keepdims))
+                   (array (gpu:strided-view-data view))
+                   (success nil))
+              (unwind-protect
+                   (let ((result (ct:make-tensor-view array shape :dtype dtype)))
+                     (setf success t)
+                     (values result t))
+                (unless success (gpu:free array)))))))))

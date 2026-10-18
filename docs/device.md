@@ -45,6 +45,7 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 | `sqrt`, `reciprocal`, exp/log, trigonometric functions and activations | F32 input/result |
 | `compare`, `select` | U8 comparison masks; selection accepts any nonzero mask byte |
 | `astype`, `dequantize` | Explicit device conversion; independent device result |
+| `fuse`, `fuse!`, `define-kernel` | F32 expressions and nested reductions; s64 top-level arg results |
 | Matching `!` forms | Write a matching destination on the same device |
 | `copy-tensor`, copying `reshape` | Independent device copy, retaining dtype |
 | Metadata views | Share storage; offsets and signed/zero input strides work |
@@ -74,6 +75,12 @@ Calls wait for completion before returning. Computation reads inputs before dest
 `astype` preserves shape, accepts all four [rounding modes](conversion.md), clamps integer narrowing and float-to-integer overflow, and copies raw bits for matching dtypes. F16/BF16 conversion pairs require real floating formats; use f32 as an intermediate for integer conversion. `dequantize` uses the same conversion path, defaulting to f32. F64 and complex device storage are unsupported.
 
 Integer division truncates toward zero; signed minimum divided by -1 wraps. Zero integer divisors, NaN-to-integer conversion and invalid tensor clamp bounds signal `cl-gpu:gpu-error`. Destination forms preserve the destination on these computation failures.[^status]
+
+## Expression fusion
+
+[Expression fusion](fusion.md#device-execution) uses the same inline and named interfaces on f32 device tensors. Arithmetic regions and dependent reduction passes use reusable GPU plans. Numeric selection is lazy, and all reducers share the supplied axis set.
+
+Run `sbcl --non-interactive --load examples/gpu-fusion.lisp`. See [GPU fusion measurements](gpu-fusion-performance.md) for complete-call timing and temporary-storage limits.
 
 ## Lifetime
 
@@ -111,7 +118,6 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 ## Limitations
 
-- Fusion lacks GPU dispatch: [#26](https://github.com/communal-software/cl-tensor/issues/26).
 - F64 and complex device storage are unsupported: [f64 #27](https://github.com/communal-software/cl-tensor/issues/27), [complex #28](https://github.com/communal-software/cl-tensor/issues/28).
 - Joins and gather lack GPU dispatch: [joins #29](https://github.com/communal-software/cl-tensor/issues/29), [gather #30](https://github.com/communal-software/cl-tensor/issues/30). Unsupported calls signal errors without implicit downloads.
 - Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).

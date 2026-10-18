@@ -1,6 +1,6 @@
 # External executors
 
-Bind `ct:*executor*` to a synchronous range executor to schedule matmul output rows and ordinary or fused reduction groups. NIL runs sequentially. Core creates no threads and owns no worker pool.
+Bind `ct:*executor*` to a synchronous range executor to schedule CPU matmul output rows and ordinary or fused CPU reduction groups. NIL runs sequentially. Core creates no threads and owns no worker pool. Device operations use their GPU backend and do not invoke this hook.
 
 ```lisp
 (let ((ct:*executor* executor))

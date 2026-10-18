@@ -1,0 +1,29 @@
+This is SBCL 2.6.8, an implementation of ANSI Common Lisp.
+More information about SBCL is available at <http://www.sbcl.org/>.
+
+SBCL is free software, provided as is, with absolutely no warranty.
+It is mostly in the public domain; some portions are provided under
+BSD-style licenses.  See the CREDITS and COPYING files in the
+distribution for more information.
+256x256 f32; median of three ten-call batches; complete synchronous calls
+case,first-call-us,warm-median-us,Lisp-bytes/call
+affine/contiguous/composed/allocate,26169.000,787.700,13104.0d0
+affine/contiguous/composed/out,8382.000,1140.700,13102.4d0
+affine/contiguous/fused/allocate,3736.000,388.400,6544.0d0
+affine/contiguous/fused/out,1657.000,732.900,13105.6d0
+affine/reversed/composed/allocate,980.000,781.800,6552.0d0
+affine/reversed/composed/out,1148.000,1138.000,19657.6d0
+affine/reversed/fused/allocate,405.000,385.900,6552.0d0
+affine/reversed/fused/out,729.000,736.900,13104.0d0
+affine/broadcast/composed/allocate,1637.000,791.100,6552.0d0
+affine/broadcast/composed/out,1156.000,1148.400,13104.0d0
+affine/broadcast/fused/allocate,921.000,393.600,6552.0d0
+affine/broadcast/fused/out,729.000,742.500,13105.6d0
+row-squares/composed/allocate,3395.000,699.500,13104.0d0
+row-squares/composed/out,894.000,926.400,19652.8d0
+row-squares/fused/allocate,1237.000,475.800,13096.0d0
+row-squares/fused/out,1041.000,755.100,13100.8d0
+softmax/composed/allocate,4577.000,1720.000,26209.6d0
+softmax/composed/out,2127.000,2061.500,32753.6d0
+softmax/fused/allocate,3631.000,959.100,32758.4d0
+softmax/fused/out,1724.000,1317.000,32756.8d0
