@@ -111,7 +111,9 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 ## Limitations
 
-- Fusion, joins and gather lack GPU dispatch; f64 and complex storage are unsupported: [#23](https://github.com/communal-software/cl-tensor/issues/23). Unsupported calls signal errors without implicit downloads.
+- Fusion lacks GPU dispatch: [#26](https://github.com/communal-software/cl-tensor/issues/26).
+- F64 and complex device storage are unsupported: [f64 #27](https://github.com/communal-software/cl-tensor/issues/27), [complex #28](https://github.com/communal-software/cl-tensor/issues/28).
+- Joins and gather lack GPU dispatch: [joins #29](https://github.com/communal-software/cl-tensor/issues/29), [gather #30](https://github.com/communal-software/cl-tensor/issues/30). Unsupported calls signal errors without implicit downloads.
 - Calls synchronize, destination forms retain full-result scratch, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).
 - Upstream kernels use one threadgroup per reduction group and upload layout metadata per call: [cl-gpu #74](https://github.com/communal-software/cl-gpu/issues/74), [cl-gpu #49](https://github.com/communal-software/cl-gpu/issues/49).
