@@ -42,8 +42,9 @@
         (let ((source (ct:tensor-dtype (first inputs))) (target (getf options :dtype)))
           (device-element source)
           (device-element target)
+          (require-device-dtype device target operation)
           (when (or (member source '(:f16 :bf16)) (member target '(:f16 :bf16)))
-            (unless (and (member source '(:f16 :bf16 :f32)) (member target '(:f16 :bf16 :f32)))
+            (unless (and (member source '(:f16 :bf16 :f32 :f64)) (member target '(:f16 :bf16 :f32 :f64)))
               (error "Encoded conversion requires real floats or encoded storage")))
           (values target
                   (lambda (result operands parameters)
@@ -55,6 +56,7 @@
             (ct::prepare-elementwise operation out inputs (getf options :dtype) (getf options :operator))
           (declare (ignore shape))
           (device-element dtype)
+          (require-device-dtype device dtype operation)
           (values dtype
                   (lambda (result operands parameters)
                     (declare (ignore operands))

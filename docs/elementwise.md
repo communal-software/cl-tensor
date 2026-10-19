@@ -79,7 +79,7 @@ Inputs are read as if copied before overlapping output writes, including aliases
 
 ## Device tensors
 
-The optional GPU extension executes these APIs on f32 and integer device tensors. Real-float math requires f32; half formats remain storage-only. Broadcasting, scalar context and mask rules are the same. Calls complete synchronously, and destination forms stage results before writing. See [device tensors](device.md#elementwise-operations-and-conversion) for supported types, errors and transfer behavior.
+The optional GPU extension executes these APIs on f32, [native-capable f64](device-f64.md) and integer device tensors. Real-float math accepts f32 or native f64; half formats remain storage-only. Broadcasting, scalar context and mask rules are the same. Calls complete synchronously, and destination forms stage results before writing. See [device tensors](device.md#elementwise-operations-and-conversion) for supported types, errors and transfer behavior.
 
 ## Limitations
 

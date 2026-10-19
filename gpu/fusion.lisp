@@ -29,7 +29,7 @@
   (let ((tensors (remove-if-not #'ct:tensorp operands)))
     (unless tensors (error "Fusion requires a tensor operand"))
     (unless (every (lambda (tensor) (eq (ct:tensor-dtype tensor) :f32)) tensors)
-      (error "GPU fusion requires :F32 tensors")))
+      (error 'ct:unsupported-operation :operation :fuse :dtypes (mapcar #'ct:tensor-dtype tensors))))
   (let* ((plan (device-fusion-plan program))
          (inputs (mapcar (lambda (input) (if (ct:tensorp input) (tensor-view input) input)) operands)))
     (multiple-value-bind (shape element device)

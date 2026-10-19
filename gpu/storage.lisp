@@ -1,7 +1,7 @@
 (in-package #:cl-tensor/gpu)
 
 (defparameter *device-elements*
-  '((:f32 . gpu:f32) (:f16 . gpu:f16) (:bf16 . gpu:bf16)
+  '((:f64 . gpu:f64) (:f32 . gpu:f32) (:f16 . gpu:f16) (:bf16 . gpu:bf16)
     (:s8 . gpu:i8) (:u8 . gpu:u8) (:s16 . gpu:i16) (:u16 . gpu:u16)
     (:s32 . gpu:i32) (:u32 . gpu:u32) (:s64 . gpu:i64) (:u64 . gpu:u64)))
 
@@ -9,11 +9,17 @@
   (or (cdr (assoc dtype *device-elements*))
       (error "Unsupported device storage dtype ~S" dtype)))
 
+(defun require-device-dtype (device dtype operation)
+  (when (and (eq dtype :f64) (not (gpu:device-native-type-p device 'gpu:f64)))
+    (error 'gpu:gpu-unsupported-capability :device device :operation operation
+           :element-type 'gpu:f64 :message "Tensor operation requires native f64")))
+
 (defun array-dtype (array)
   (or (car (rassoc (gpu:scalar-type-name (gpu:gpu-array-element-type array)) *device-elements*))
       (error "Unsupported device storage element type")))
 
 (defun tensor-view (tensor)
+  (require-device-dtype (tensor-device tensor) (ct:tensor-dtype tensor) :view)
   (gpu:make-strided-view (ct:tensor-storage tensor) (ct:tensor-shape tensor)
                          :strides (ct:tensor-strides tensor) :offset (ct:tensor-offset tensor)))
 
@@ -29,11 +35,13 @@
   (upgraded-array-element-type (ct:dtype-element-type (array-dtype storage))))
 
 (defmethod ct:validate-storage-view :after ((dtype ct:dtype) (storage gpu:gpu-array) shape strides offset)
+  (require-device-dtype (gpu:gpu-array-device storage) (ct:dtype-name dtype) :view)
   (unless (eq (ct:dtype-name dtype) (array-dtype storage))
     (error "Device storage dtype does not match tensor dtype"))
   (gpu:make-strided-view storage shape :strides strides :offset offset))
 
 (defmethod ct:allocate-storage-like ((dtype ct:dtype) (storage gpu:gpu-array) shape)
+  (require-device-dtype (gpu:gpu-array-device storage) (ct:dtype-name dtype) :allocate)
   (gpu:make-gpu-array (reduce #'* shape) :element-type (device-element (ct:dtype-name dtype))
                      :device (gpu:gpu-array-device storage)))
 
@@ -46,6 +54,8 @@
   "Allocate an independent zeroed tensor of a supported device dtype."
   (unless (every (lambda (n) (typep n '(integer 0 #.most-positive-fixnum))) shape)
     (error "Shape must contain nonnegative dimensions"))
+  (setf device (or device (gpu:current-device)))
+  (require-device-dtype device dtype :allocate)
   (let ((storage (gpu:make-gpu-array (reduce #'* shape) :element-type (device-element dtype)
                                    :device device))
         (success nil))
@@ -106,6 +116,8 @@
   (check-type tensor ct:tensor)
   (let* ((storage (ct:tensor-storage tensor)) (dtype (ct:tensor-dtype tensor))
          (element (device-element dtype)) (n (ct:tensor-size tensor)))
+    (setf device (or device (gpu:current-device)))
+    (require-device-dtype device dtype :upload)
     (unless (ct:storage-readable-p storage) (error "TO-DEVICE requires readable CPU storage"))
     (let* ((values (if (and (typep storage '(simple-array * (*))) (ct:contiguous-p tensor))
                        (if (and (zerop (ct:tensor-offset tensor)) (= n (length storage))) storage

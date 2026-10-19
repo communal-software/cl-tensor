@@ -27,7 +27,7 @@ Functions below belong to `cl-tensor/gpu`.
 | `(free-device-tensor tensor)` | Release the tensor's GPU array; return NIL |
 | `(with-device-tensor (name form) ...)` | Bind a device tensor and release it on exit |
 
-Storage supports `:f32`, `:f16`, `:bf16` and signed/unsigned 8-, 16-, 32- and 64-bit integers (`:s8` through `:s64`, `:u8` through `:u64`). Omitted `:device` uses cl-gpu's current device. Ordinary `make-tensor`, `zeros` and other constructors allocate CPU storage, including after the GPU system loads.
+Storage supports [native-capable `:f64`](device-f64.md), `:f32`, `:f16`, `:bf16` and signed/unsigned 8-, 16-, 32- and 64-bit integers (`:s8` through `:s64`, `:u8` through `:u64`). Omitted `:device` uses cl-gpu's current device. Ordinary `make-tensor`, `zeros` and other constructors allocate CPU storage, including after the GPU system loads.
 
 Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguous CPU inputs pack their logical values first. Noncontiguous downloads gather on the device before one bulk download. Neither transfer performs dtype conversion. Half-format transfers preserve raw 16-bit encodings, including NaN payloads and signed zero.
 
@@ -37,13 +37,13 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 
 | Operation | Device behavior |
 |---|---|
-| `sum`, `mean`, `prod`, `minimum`, `maximum` | F32 input and result |
-| `argmin`, `argmax` | F32 input; signed 64-bit result |
-| `softmax`, `rmsnorm` | F32 input and result; scalar or device tensor RMSNorm weights |
-| `take`, `take!` | Same-device integer indices; retain input dtype, device and raw bits |
+| `sum`, `mean`, `prod`, `minimum`, `maximum` | F32 or native f64 input and result |
+| `argmin`, `argmax` | F32 or native f64 input; signed 64-bit result |
+| `softmax`, `rmsnorm` | F32 or native f64; matching scalar or device tensor RMSNorm weights |
+| `take`, `take!` | Same-device integer indices; retain supported input dtype (excluding f64), device and raw bits |
 | `matmul` | F32 vectors, matrices and broadcast batches; device-resident results |
-| Arithmetic, bounds, `negate`, `abs` | F32 and integer inputs/results; integer arithmetic wraps |
-| `sqrt`, `reciprocal`, exp/log, trigonometric functions and activations | F32 input/result |
+| Arithmetic, bounds, `negate`, `abs` | F32, native f64 and integer inputs/results; integer arithmetic wraps |
+| `sqrt`, `reciprocal`, exp/log, trigonometric functions and activations | F32 or native f64 input/result |
 | `compare`, `select` | U8 comparison masks; selection accepts any nonzero mask byte |
 | `astype`, `dequantize` | Explicit device conversion; independent device result |
 | `fuse`, `fuse!`, `define-kernel` | F32 expressions and nested reductions; s64 top-level arg results |
@@ -53,7 +53,7 @@ Transfers preserve shape and dtype. Uploads use specialized vectors; noncontiguo
 
 [Reduction](reductions.md) axis, `keepdims`, empty-group and logical index rules apply. [Normalization](normalization.md) axis and weight-broadcasting rules apply. An empty axis vector selects no axes; NIL selects all axes.
 
-Reductions, normalization and matrix products require f32 inputs. `:accumulate :f64` signals an error. F16 and BF16 remain storage-only: convert to f32 before arithmetic. Floating-point arithmetic uses upstream GPU kernels; results need not be bit-identical to CPU results.
+Reductions and normalization accept f32 and native f64 inputs; matrix products require f32. F64 sum, mean and normalization accept `:accumulate :f64`; f32 inputs reject widened accumulation. F16 and BF16 remain storage-only: convert to f32 or native f64 before arithmetic. Floating-point arithmetic uses upstream GPU kernels; results need not be bit-identical to CPU results.
 
 All tensor operands and a supplied destination must occupy the same device. Host tensor weights, CPU destinations and tensors on another device signal errors. Scalar operands and weights are accepted. Use explicit transfers to cross the CPU/device boundary.
 
@@ -73,7 +73,7 @@ Calls wait for completion before returning. Computation reads inputs before dest
 ;; BF16 CPU tensor; values are raw encoded bits
 ```
 
-`astype` preserves shape, accepts all four [rounding modes](conversion.md), clamps integer narrowing and float-to-integer overflow, and copies raw bits for matching dtypes. F16/BF16 conversion pairs require real floating formats; use f32 as an intermediate for integer conversion. `dequantize` uses the same conversion path, defaulting to f32. F64 and complex device storage are unsupported.
+`astype` preserves shape, accepts all four [rounding modes](conversion.md), clamps integer narrowing and float-to-integer overflow, and copies raw bits for matching dtypes. F16/BF16 conversion pairs require real floating formats; use f32 as an intermediate for integer conversion. `dequantize` uses the same conversion path, defaulting to f32. F64 requires [native capability](device-f64.md); complex device storage is unsupported.
 
 Integer division truncates toward zero; signed minimum divided by -1 wraps. Zero integer divisors, NaN-to-integer conversion and invalid tensor clamp bounds signal `cl-gpu:gpu-error`. Destination forms preserve the destination on these computation failures.[^status]
 
@@ -121,7 +121,7 @@ See [testing](testing.md#device-tests) for mock-device and Metal suites.
 
 `take` and `take!` gather slices with the [shape API](shape.md#gather). Input and indices, plus the destination for `take!`, reside on the same device. Upload CPU indices explicitly. All eight integer index dtypes are accepted, including scalar and batched indices. Negative indices count from the end.
 
-Gather retains the input dtype and device, including raw f16/bf16 encodings. Signed/zero strides, GPU-array windows and unique irregular destinations are supported. Bounds failures signal `cl-gpu:gpu-error` with the axis and its length. Nonempty indices are checked even when another dimension makes the result empty.
+Gather accepts the storage dtypes above except f64; see [f64 limitations](device-f64.md#limitations). It retains the input dtype and device, including raw f16/bf16 encodings. Signed/zero strides, GPU-array windows and unique irregular destinations are supported. Bounds failures signal `cl-gpu:gpu-error` with the axis and its length. Nonempty indices are checked even when another dimension makes the result empty.
 
 Only a single u32 error status is downloaded for nonempty indices; operand and result values stay on-device. Empty indices need no launch or status read. Calls wait for completion. `take!` consumes aliased input/index values before destination writes and preserves the destination on validation or gather-computation errors. Final-copy failures may leave partial output.[^gather]
 
@@ -129,7 +129,7 @@ Run [the embedding example](../examples/gpu-gather.lisp) for explicit uploads, b
 
 ## Limitations
 
-- F64 and complex device storage are unsupported: [f64 #27](https://github.com/communal-software/cl-tensor/issues/27), [complex #28](https://github.com/communal-software/cl-tensor/issues/28).
+- F64 requires native capability and excludes matrix products, gather and fusion: [f64 limitations](device-f64.md#limitations). Complex device storage is unsupported: [#28](https://github.com/communal-software/cl-tensor/issues/28).
 - Joins lack GPU dispatch: [#29](https://github.com/communal-software/cl-tensor/issues/29). Unsupported calls signal errors without implicit downloads.
 - Calls synchronize, destination forms retain full-result scratch, allocating gather retains an extra result buffer, and copies sharing a root buffer conservatively stage even disjoint ranges: [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - Irregular destination uniqueness checks may require O(output elements) host metadata workspace: [#5](https://github.com/communal-software/cl-tensor/issues/5).

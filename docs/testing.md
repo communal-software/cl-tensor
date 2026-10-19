@@ -106,14 +106,26 @@ sbcl --non-interactive --eval '(require :asdf)' \
 
 | Suite | Coverage |
 |---|---|
-| Mock device | All storage dtypes, bulk/raw transfers, placement, lifetime, validation, elementwise/scalar/conversion dispatch, matmul batch grouping/window offsets and failure cleanup |
+| Mock device | Native-f64 capability gates, supported operation families, empty-call rejection, failure staging, all storage dtypes, bulk/raw transfers, placement, lifetime, validation, elementwise/scalar/conversion dispatch, matmul batch grouping/window offsets and failure cleanup |
 | Gather protocol | Dtype/index combinations, explicit placement, status-only downloads, empty indices, synchronous return and failure cleanup |
 | Gather Metal | Independent coordinate references, raw half bits, bounds/extreme indices, windows/strides, aliases and destination padding |
 | Fusion protocol | Inline/named dispatch, placement/dtype errors, cache reuse, concurrent first use, redefinition and compilation/launch/completion cleanup |
 | Fusion Metal | Independent scalar arithmetic/reduction references, lazy selection, nested groups, windows/strides, aliases, padding guards, empty/scalar outputs and staged failures |
-| Metal | CPU and independent references for elementwise, masks, integer arithmetic/conversion, half-format bits, reductions, normalization and matmul; layouts, windows, aliases, errors and scalar results |
+| OpenCL f64 | CPU-double and independent scalar references, direct rounding, raw copies, strided windows, aliases, normalization and empty/failure validation |
+| Metal | F64 storage/conversion rejection; CPU and independent references for elementwise, masks, integer arithmetic/conversion, half-format bits, reductions, normalization and matmul; layouts, windows, aliases, errors and scalar results |
 
 Matmul checks include vector products, broadcast batches, aliases across batches, irregular destinations with guard values, and zero-contraction products. Computation and device-copy checks forbid operand/result downloads; checked operations permit the documented single-word error status. Integers and encoded storage compare exactly; f32 values use relative/absolute tolerance `1e-4`.
+
+Run native-f64 conformance on a selected capable OpenCL device:
+
+```lisp
+(asdf:load-system "cl-gpu/opencl")
+(asdf:test-system "cl-tensor/gpu/opencl/tests")
+(load "examples/device-f64.lisp")
+(cl-tensor/device-f64-example:run-example)
+```
+
+The suite uses `cl-gpu:*device*` when bound, otherwise the default OpenCL device, and fails if native f64 is unavailable. An explicitly selected PoCL CPU device is supported. Arithmetic fixtures compare against CPU doubles with `abs(error) ≤ 2e-13 × max(1, abs(reference))`; integers, encoded formats, rounding boundaries and raw copies compare exactly. Computation forbids operand/result downloads and permits only documented error-status reads. See [native f64](device-f64.md) for the support matrix.
 
 Run `examples/gpu-gather.lisp` for batched embedding lookup with explicit transfers and cleanup.
 
@@ -131,16 +143,19 @@ Run `examples/device.lisp` for upload, reduction, softmax, weighted RMSNorm, mat
 
 ## Validation
 
-SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-18:
+SBCL 2.6.8 and ECL 26.5.5 execute the full suite and the tensor, extension, fusion and executor examples. Recorded run, 2026-10-19:
 
 | Implementation/backend | Passing checks |
 |---|---:|
 | SBCL default/native | 136,268 |
-| SBCL Lisp after GPU loading | 136,238 |
-| ECL | 136,407 |
+| SBCL Lisp after GPU loading | 136,268 |
+| ECL default/native | 134,989 |
+| ECL Lisp after GPU loading | 136,181 |
 | Experimental ARM64 CCL (2026-10-07 run) | 31,358; direct selectors, fusion and executors are untested, subject to the [CCL limitation](#limitations) |
 
-The SBCL and ECL GPU protocol suites each pass 1,899 checks; real Metal execution passes 10,192 checks on both Lisps with MPS enabled and again with MPS disabled. These include gather, elementwise and fusion dispatch, scalar operands, all conversion pairs, every raw half encoding, integer wrapping, lazy nested reductions, concurrent fusion plans and staged failures. The CPU Lisp-backend suite also passes after the GPU extension loads. The embedding example passes on both Lisps.
+The SBCL and ECL GPU protocol suites each pass 2,014 checks; real Metal execution passes 10,201 checks on both Lisps with MPS enabled and again with MPS disabled. These include gather, elementwise and fusion dispatch, scalar operands, all conversion pairs, every raw half encoding, integer wrapping, lazy nested reductions, concurrent fusion plans and staged failures. The CPU Lisp-backend suite also passes after the GPU extension loads. The embedding example passes on both Lisps.
+
+Native f64 conformance passes 465 checks on Ubuntu 24.04 ARM64 with SBCL 2.2.9 and PoCL’s explicitly selected CPU device (`cpu--0x000`). The f64 example returns the expected double-precision addition and sum.
 
 Normal and forced ASDF loading pass in a fresh SBCL process. Repeated runs advance the random state and may execute a different number of generated checks.[^seed]
 

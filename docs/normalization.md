@@ -57,6 +57,10 @@ Empty tensors return empty results without evaluating groups, while still valida
 
 Maximum subtraction avoids exponential overflow for ordinary finite softmax inputs. Extreme differences, square overflow, underflow, NaNs, infinities and traps follow the active backend and Lisp environment. There is no special nonfinite-input policy or cross-backend bit-identity guarantee.
 
+## Device precision
+
+Device normalization accepts f32 and [native-capable f64](device-f64.md). F64 operands and accumulators retain double precision. F64 softmax and RMSNorm accept `:accumulate :f64`; device f32 inputs reject widening. Results stay on the device.
+
 ## Limitations
 
 - Normalization uses full-result scratch, and portable f64 weight/output stages allocate per element: [#8](https://github.com/communal-software/cl-tensor/issues/8).

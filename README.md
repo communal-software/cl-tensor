@@ -18,7 +18,7 @@ Construct, index and copy strided tensors; reshape and slice views; broadcast ar
 - [Design](docs/design.md)
 - [Dtypes and strides](docs/dtypes-and-strides.md)
 - [Dtype and storage extensions](docs/extensions.md)
-- [Device tensors](docs/device.md)
+- [Device tensors](docs/device.md), including [native f64](docs/device-f64.md)
 - [API](docs/api.md)
 - [Constructors and access](docs/constructors.md)
 - [Elementwise operations](docs/elementwise.md)

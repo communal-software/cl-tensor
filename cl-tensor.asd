@@ -37,7 +37,8 @@
   :depends-on ("cl-tensor/gpu" "cl-tensor/tests")
   :serial t
   :components ((:file "tests/gpu") (:file "tests/gpu-operations")
-               (:file "tests/gpu-elementwise") (:file "tests/gpu-fusion") (:file "tests/gpu-gather"))
+               (:file "tests/gpu-elementwise") (:file "tests/gpu-fusion") (:file "tests/gpu-gather")
+               (:file "tests/gpu-f64"))
   :perform (asdf:test-op (op component)
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-tests)
@@ -52,3 +53,12 @@
              (declare (ignore op component))
              (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-metal-tests)
                (error "cl-tensor Metal tests failed"))))
+
+(asdf:defsystem "cl-tensor/gpu/opencl/tests"
+  :description "Native-f64 OpenCL tensor conformance"
+  :depends-on ("cl-tensor/gpu/tests" "cl-gpu/opencl")
+  :components ((:file "tests/gpu-f64-opencl"))
+  :perform (asdf:test-op (op component)
+             (declare (ignore op component))
+             (unless (uiop:symbol-call :cl-tensor/gpu/tests :run-opencl-tests)
+               (error "cl-tensor OpenCL f64 tests failed"))))

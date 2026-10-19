@@ -227,3 +227,14 @@
         (tg:with-device-tensor (device-a (tg:to-device a))
           (tg:with-device-tensor (device-b (tg:to-device b))
             (check-metal-matmul a b device-a device-b)))))))
+
+(test metal-rejects-f64-tensors-including-empty-storage
+  (let ((device (cl-gpu/metal:default-device)))
+    (is (not (gpu:device-native-type-p device 'gpu:f64)))
+    (dolist (shape '(nil (0) (2)))
+      (signals gpu:gpu-unsupported-capability (tg:make-device-tensor shape :dtype :f64 :device device))
+      (signals gpu:gpu-unsupported-capability (tg:to-device (ct:zeros shape :dtype :f64) :device device)))
+    (gpu:with-gpu-array (raw (gpu:make-gpu-array 0 :element-type 'gpu:f64 :device device))
+      (signals gpu:gpu-unsupported-capability (ct:make-tensor-view raw '(0))))
+    (tg:with-device-tensor (empty (tg:make-device-tensor '(0) :device device))
+      (signals gpu:gpu-unsupported-capability (ct:astype empty :f64)))))

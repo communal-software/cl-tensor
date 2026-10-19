@@ -100,7 +100,7 @@ Run `sbcl --non-interactive --load examples/gpu-fusion.lisp` for named multiply-
 - Mask outputs and count/any/all reductions are unsupported: [#17](https://github.com/communal-software/cl-tensor/issues/17).
 - All reducers share one axis set: [#19](https://github.com/communal-software/cl-tensor/issues/19).
 - Custom dtypes and arbitrary Lisp calls are unsupported.
-- GPU fusion supports f32 computation on Metal. F16/BF16 remain storage-only; convert explicitly before fusion. F64 device storage is tracked in [#27](https://github.com/communal-software/cl-tensor/issues/27).
+- GPU fusion supports f32 computation on Metal. F16/BF16 remain storage-only; convert explicitly before fusion. F64 device fusion is tracked in [#32](https://github.com/communal-software/cl-tensor/issues/32).
 - GPU plan lookup uses a shared publication lock; concurrent-call contention is tracked in [#31](https://github.com/communal-software/cl-tensor/issues/31). Kernel execution runs outside this lock.
 - GPU reductions retain full-shape operand and demand-mask scratch: [upstream #83](https://github.com/communal-software/cl-gpu/issues/83). Synchronous destination staging remains tracked in [#22](https://github.com/communal-software/cl-tensor/issues/22).
 - CPU out-forms stage complete results. Packed reduction operands and scalar-variable operands retain one complete row per worker; irregular nested vector results also use a row buffer. Plain elementwise packing is bounded to 4,096 elements per operand. Bounded multi-pass execution and transactional output are tracked in [#13](https://github.com/communal-software/cl-tensor/issues/13).

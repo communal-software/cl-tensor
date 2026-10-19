@@ -51,6 +51,10 @@ The output must match the result shape and dtype exactly. Strided destinations w
 
 Floating-point order and exceptional values follow trivial-simd and the active Lisp floating-point environment. Last bits may differ between backends.
 
+## Device precision
+
+Device reductions accept f32 and [native-capable f64](device-f64.md). F64 operands and accumulators retain double precision. F64 sum and mean accept `:accumulate :f64`; device f32 inputs reject widening. Results stay on the device.
+
 ## Limitations
 
 - Irregular reductions can require O(input elements) packing, and out-forms use O(output elements) scratch: [#7](https://github.com/communal-software/cl-tensor/issues/7).

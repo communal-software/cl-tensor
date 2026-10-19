@@ -39,7 +39,7 @@
 
 ## Device tensors
 
-`astype` and `dequantize` retain device placement and return independent contiguous storage. Device storage supports f32, f16/bf16 and all integer widths. Encoded pairs require floating formats; f64 and complex targets are unsupported. Transfers preserve the dtype and raw half bits. See [device conversion](device.md#elementwise-operations-and-conversion) for completion and failure rules.
+`astype` and `dequantize` retain device placement and return independent contiguous storage. Device storage supports f32, native-capable f64, f16/bf16 and all integer widths. Encoded pairs require floating formats; complex targets are unsupported. F64 conversions preserve double precision and support direct floating narrowing with all four rounding modes. See [native f64](device-f64.md#precision-and-conversion) for the device precision contract. Transfers preserve the dtype and raw half bits. See [device conversion](device.md#elementwise-operations-and-conversion) for completion and failure rules.
 
 [^rounding]: Rounding modes affect float-to-integer conversion and encoded narrowing; other conversions ignore the mode after validating its name. Values follow trivial-simd's conversion contract. Conversion passes the full signed-stride layout to one upstream N-D call; native-supported float/encoded pairs execute directly in C and other pairs use Lisp.
 [^encoding]: Matching encodings copy bit patterns, including NaN payloads. Different encodings use upstream conversion rules for signed zero, subnormals, infinities and NaN payloads.
