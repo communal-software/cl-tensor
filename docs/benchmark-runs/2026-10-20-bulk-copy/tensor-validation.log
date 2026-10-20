@@ -46,20 +46,20 @@
 ;      :START2 (/ CL-TENSOR/EXTENSION-EXAMPLE::START 2) :END2
 ;      (/ (+ CL-TENSOR/EXTENSION-EXAMPLE::START CL-TENSOR/EXTENSION-EXAMPLE::SIZE)
 ;         2))
-; 
+;
 ; note: unable to
 ;   optimize
 ; due to type uncertainty:
 ;   The first argument is a SEQUENCE, not a (OR NULL (SIMPLE-ARRAY * (*))).
 ;   The second argument is a SEQUENCE, not a (OR NULL (SIMPLE-ARRAY * (*))).
-; 
+;
 ; note: unable to
 ;   optimize
 ; due to type uncertainty:
 ;   The first argument is a SEQUENCE, not a (OR SIMPLE-BASE-STRING NULL).
 ;   The second argument is a SEQUENCE, not a (OR NULL
 ;                                                (SIMPLE-ARRAY CHARACTER (*))).
-; 
+;
 ; note: unable to
 ;   optimize
 ; due to type uncertainty:
@@ -198,6 +198,6 @@ Running test suite CL-TENSOR
     Skip: 0 ( 0%)
     Fail: 0 ( 0%)
 
-; 
+;
 ; compilation unit finished
 ;   printed 3 notes
