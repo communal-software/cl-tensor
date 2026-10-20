@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [trunk]
+    tags: ['**']
+    paths-ignore: ['docs/**', '**.md', 'LICENSE']
+  pull_request:
+    branches: [trunk]
+    paths-ignore: ['docs/**', '**.md', 'LICENSE']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      entries: ${{ steps.select.outputs.entries }}
+    steps:
+      - id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          python3 - <<'PY'
+          import itertools
+          import json
+          import os
+
+          full = os.environ['EVENT_NAME'] == 'workflow_dispatch' or os.environ['REF'].startswith('refs/tags/')
+          platforms = [('ubuntu-24.04', 'X64'), ('ubuntu-24.04-arm', 'ARM64'), ('macos-15', 'ARM64')]
+          lisps = ['sbcl', 'ecl'] if full else ['sbcl']
+          entries = [dict(os=runner, arch=arch, lisp=lisp, backend=backend)
+                     for (runner, arch), lisp, backend in itertools.product(
+                         platforms if full else platforms[:1], lisps, ['native', 'lisp'])]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('entries=' + json.dumps(entries) + '\n')
+          PY
+
+  test:
+    needs: matrix
+    name: ${{ matrix.lisp }} / ${{ matrix.os }} / ${{ matrix.backend }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.entries) }}
+    env:
+      CI_LISP: ${{ matrix.lisp }}
+      TRIVIAL_SIMD_BACKEND: ${{ matrix.backend }}
+      CL_TENSOR_DIR: ${{ github.workspace }}
+      TRIVIAL_SIMD_DIR: ${{ github.workspace }}/.ci-deps/trivial-simd
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: communal-software/trivial-simd
+          ref: 19d734f8806e07d5ce5b806e90b44621f4347146
+          path: .ci-deps/trivial-simd
+          persist-credentials: false
+      - name: Configure runner
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          test "$RUNNER_ARCH" = "$EXPECTED_ARCH"
+          echo "CI_QUICKLISP_DIR=$RUNNER_TEMP/quicklisp" >> "$GITHUB_ENV"
+      - name: Install Lisp and build tools
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            sudo apt-get update
+            sudo apt-get install -y "$CI_LISP" build-essential cmake curl libffi-dev libecl-dev
+          else
+            brew install "$CI_LISP" cmake
+          fi
+      - name: Build native library
+        run: |
+          git -C "$TRIVIAL_SIMD_DIR" log -1 --format='%H %s'
+          cmake -S "$TRIVIAL_SIMD_DIR" -B "$TRIVIAL_SIMD_DIR/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build "$TRIVIAL_SIMD_DIR/build" --parallel 2
+      - name: Install Lisp dependencies
+        shell: bash
+        run: |
+          curl --fail --location https://beta.quicklisp.org/quicklisp.lisp --output "$RUNNER_TEMP/quicklisp.lisp"
+          export CI_QUICKLISP_BOOTSTRAP="$RUNNER_TEMP/quicklisp.lisp"
+          bash .github/scripts/lisp.sh .github/scripts/bootstrap.lisp
+      - name: Run FiveAM suite
+        run: bash .github/scripts/lisp.sh .github/scripts/test.lisp
