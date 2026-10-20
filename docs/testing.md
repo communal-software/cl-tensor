@@ -23,6 +23,8 @@ Choose **Actions → CI → Run workflow** to run the full matrix on a selected 
 
 CI builds the pinned `trivial-simd` shared library before loading tests and verifies the requested backend and source directories. Its logs include the dependency commit, Lisp version and selected backend. Dependencies are installed without a cache.
 
+Linux SBCL jobs use checksummed SBCL 2.6.8 binaries. ECL and macOS SBCL come from the platform package manager. Quicklisp retries interrupted downloads up to three attempts.
+
 ### Reproduce a CI test
 
 With Quicklisp dependencies installed and a built `trivial-simd` checkout:
