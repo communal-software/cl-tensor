@@ -207,6 +207,7 @@ Gather checks cover scalar and batched token indices, negative and out-of-range 
 
 ## Limitations
 
+- Ubuntu 24.04's SBCL 2.2.9 on x86-64 cannot load the pinned `trivial-simd` SIMD definitions, including with the native or Lisp backend selected. CI uses SBCL 2.6.8: [upstream #89](https://github.com/communal-software/trivial-simd/issues/89).
 - The experimental ARM64 CCL `1.13 (v1.13-459-g690ff7ea)` build can crash or end compiled normalization reference checks prematurely while reporting success. Its green summary does not establish complete normalization coverage: [#9](https://github.com/communal-software/cl-tensor/issues/9). SBCL native/Lisp and ECL execute the full checks.
 
 [^seed]: SBCL runs use a fixed seed, so failures reproduce. Other Lisps seed from the clock.
