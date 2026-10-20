@@ -1,0 +1,157 @@
+;Compiler warnings for "home:git;trivial-simd;integer-lisp.lisp.newest" :
+;   In DEFINE-INTEGER-ARITHMETIC: Unused lexical variable FOREIGN
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "trivial-simd" "integer-lisp">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;trivial-simd;native.lisp.newest" :
+;   In DEFINE-NATIVE-BULK-CALLS: Unused lexical variable ELEMENT
+;   In DEFINE-NATIVE-EXTENDED-CALLS: Unused lexical variable ELEMENT
+;   In DEFINE-NATIVE-BINARY-DISPATCH: Unused lexical variable ELEMENT
+;   In DEFINE-NATIVE-REDUCTIONS: Unused lexical variable ELEMENT
+;   In DEFINE-NATIVE-KERNEL-DISPATCH: Unused lexical variable ELEMENT
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "trivial-simd" "native">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;trivial-simd;extended-operations.lisp.newest" :
+;   In MASK-KERNEL-EXPANSION: Unused lexical variable ELEMENT
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "trivial-simd" "extended-operations">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;trivial-simd;kernel.lisp.newest" :
+;   In DEFINE-SINGLE-ROW-KERNEL: Unused lexical variable ELEMENT
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "trivial-simd" "kernel">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;trivial-simd;kernel-inputs.lisp.newest" :
+;   In RESOLVE-DECLARED-KERNEL: Unused lexical variable SOURCE
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "trivial-simd" "kernel-inputs">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;cl-tensor;reductions.lisp.newest" :
+;   In #:BODY23912 inside #:SCALAR-KERNEL23467 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX23561
+;   In #:BODY23912 inside #:SCALAR-KERNEL23467 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX23567
+;   In #:BODY24241 inside #:SCALAR-KERNEL23800 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX23894
+;   In #:BODY24241 inside #:SCALAR-KERNEL23800 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX23900
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "cl-tensor" "reductions">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings for "home:git;cl-tensor;tests;fusion.lisp.newest" :
+;   In #:BODY30192 inside #:PASS29979 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX30078
+;   In #:BODY30192 inside #:PASS29979 inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX30084
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "cl-tensor/tests" "tests/fusion">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+;Compiler warnings :
+;   In #:BLOCK33686 inside #:SCALAR-KERNEL33607 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL33607
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL33607
+;   In #:BLOCK34155 inside #:SCALAR-KERNEL34042 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34042
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34042
+;   In #:BODY34489 inside #:SCALAR-KERNEL34377 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX34471
+;   In #:BODY34489 inside #:SCALAR-KERNEL34377 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX34477
+;   In #:BLOCK34490 inside #:SCALAR-KERNEL34377 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34377
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34377
+;   In #:BODY34820 inside #:SCALAR-KERNEL34708 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX34802
+;   In #:BODY34820 inside #:SCALAR-KERNEL34708 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX34808
+;   In #:BLOCK34821 inside #:SCALAR-KERNEL34708 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34708
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL34708
+;   In #:BLOCK35152 inside #:SCALAR-KERNEL35039 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL35039
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL35039
+;   In #:BLOCK35492 inside #:SCALAR-KERNEL35379 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL35379
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL35379
+;   In #:BODY35926 inside #:PASS35713 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX35812
+;   In #:BODY35926 inside #:PASS35713 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX35818
+;   In #:BLOCK36762 inside #:SCALAR-KERNEL36649 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL36649
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL36649
+;   In #:BLOCK37730 inside #:SCALAR-KERNEL37651 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL37651
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL37651
+;Compiler warnings :
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BODY38701 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In #:BLOCK38702 inside #:SCALAR-KERNEL38558 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL38558
+;Compiler warnings :
+;   In #:BLOCK40000 inside #:SCALAR-KERNEL39937 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL39937
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL39937
+;   In #:BLOCK40322 inside #:SCALAR-KERNEL40209 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL40209
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL40209
+;   In #:BODY40705 inside #:PASS40547 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX40645
+;   In #:BODY40705 inside #:PASS40547 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX40651
+;   In #:BODY41331 inside #:SCALAR-KERNEL41219 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX41313
+;   In #:BODY41331 inside #:SCALAR-KERNEL41219 inside an anonymous lambda form inside an anonymous lambda form: Unused lexical variable #:BEST-INDEX41319
+;   In #:BLOCK41332 inside #:SCALAR-KERNEL41219 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41219
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41219
+;   In #:BLOCK41666 inside #:SCALAR-KERNEL41553 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41553
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41553
+;   In #:BLOCK41952 inside #:SCALAR-KERNEL41887 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41887
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL41887
+;   In #:BLOCK43087 inside #:SCALAR-KERNEL43024 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL43024
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL43024
+;   In #:BLOCK43358 inside #:SCALAR-KERNEL43295 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL43295
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL43295
+;Compiler warnings :
+;   In #:BLOCK47529 inside #:SCALAR-KERNEL47466 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL47466
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL47466
+;Compiler warnings :
+;   In #:BLOCK49804 inside #:SCALAR-KERNEL49725 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL49725
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL49725
+;Compiler warnings :
+;   In #:BODY50334 inside #:SCALAR-KERNEL50287 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50287
+;   In #:BODY50334 inside #:SCALAR-KERNEL50287 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50287
+;   In #:BLOCK50335 inside #:SCALAR-KERNEL50287 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50287
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50287
+;   In #:BODY50452 inside #:SCALAR-KERNEL50405 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50405
+;   In #:BODY50452 inside #:SCALAR-KERNEL50405 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50405
+;   In #:BLOCK50453 inside #:SCALAR-KERNEL50405 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50405
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50405
+;   In #:BODY50563 inside #:SCALAR-KERNEL50516 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50516
+;   In #:BODY50563 inside #:SCALAR-KERNEL50516 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50516
+;   In #:BLOCK50564 inside #:SCALAR-KERNEL50516 inside an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50516
+;   In an anonymous lambda form inside an anonymous lambda form: Undefined function #:SCALAR-KERNEL50516
+;Compiler warnings for "home:git;cl-tensor;tests;extensions.lisp.newest" :
+;   In (CT:RESOLVE-OPERATION (HOOKED-DTYPE T T T)) inside an anonymous lambda form: Unused lexical variable INPUTS
+;   In (CT:STORAGE-REF (FAILING-STORAGE T)) inside an anonymous lambda form: Unused lexical variable INDEX
+; Warning: Lisp compilation had style-warnings while compiling #<CL-SOURCE-FILE "cl-tensor/tests" "tests/extensions">
+; While executing: UIOP/LISP-BUILD:CHECK-LISP-COMPILE-WARNINGS, in process listener(1).
+
+Running test VECTOR-COPY-RUNS-AND-FALLBACKS ................................................................................................................................................................................................................................................................
+ Did 256 checks.
+    Pass: 256 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
+
+
+Running test VECTOR-COPY-ENCODED-BITS ..
+ Did 2 checks.
+    Pass: 2 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
+
+
+Running test VECTOR-COPY-DESTINATION-LAYOUTS ......
+ Did 6 checks.
+    Pass: 6 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
+
+
+Running test ACCESS-AND-COPY ..............
+ Did 14 checks.
+    Pass: 14 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
+
+
+Running test FOREIGN-ACCESS-AND-COPY ........................
+ Did 24 checks.
+    Pass: 24 (100%)
+    Skip: 0 ( 0%)
+    Fail: 0 ( 0%)
+
+Clozure Common Lisp Version 1.13 (v1.13-459-g690ff7ea) DarwinARM6464
+
+For more information about CCL, please see https://ccl.clozure.com.
+
+CCL is free software.
+It is distributed under the terms of the Apache License, Version 2.0.
+? 

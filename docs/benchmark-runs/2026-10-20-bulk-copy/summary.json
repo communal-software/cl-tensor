@@ -1,0 +1,74 @@
+[
+  {
+    "model": "QWEN-F16",
+    "phase": "PREFILL",
+    "before_ms": 3598.791,
+    "after_ms": 2392.046,
+    "paired_gain_percent": 33.53195559286439,
+    "pair_gains_percent": [
+      33.53195559286439,
+      59.116004174484814,
+      33.09286497234189
+    ]
+  },
+  {
+    "model": "QWEN-F16",
+    "phase": "DECODE",
+    "before_ms": 151.483,
+    "after_ms": 137.534,
+    "paired_gain_percent": 8.727456509017395,
+    "pair_gains_percent": [
+      8.228646118706395,
+      53.31991541962658,
+      8.727456509017395
+    ]
+  },
+  {
+    "model": "QWEN-F16",
+    "phase": "GENERATE",
+    "before_ms": 4658.667,
+    "after_ms": 2965.612,
+    "paired_gain_percent": 36.663835384671195,
+    "pair_gains_percent": [
+      35.94120854102243,
+      63.12430771350199,
+      36.663835384671195
+    ]
+  },
+  {
+    "model": "QWEN-Q8",
+    "phase": "PREFILL",
+    "before_ms": 5613.494,
+    "after_ms": 4488.332,
+    "paired_gain_percent": 20.043879979207237,
+    "pair_gains_percent": [
+      20.00413197381895,
+      20.043879979207237,
+      20.66422820469469
+    ]
+  },
+  {
+    "model": "QWEN-Q8",
+    "phase": "DECODE",
+    "before_ms": 183.258,
+    "after_ms": 171.912,
+    "paired_gain_percent": 6.260271354863367,
+    "pair_gains_percent": [
+      7.33232183017507,
+      6.191271322397929,
+      6.260271354863367
+    ]
+  },
+  {
+    "model": "QWEN-Q8",
+    "phase": "GENERATE",
+    "before_ms": 6813.121,
+    "after_ms": 5182.442,
+    "paired_gain_percent": 24.2662991854426,
+    "pair_gains_percent": [
+      24.2662991854426,
+      23.135364518722824,
+      24.537829285579992
+    ]
+  }
+]

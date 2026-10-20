@@ -1,0 +1,6 @@
+(require :asdf)
+(load "/Users/george/quicklisp/setup.lisp")
+(asdf:initialize-source-registry '(:source-registry (:directory "/Users/george/git/cl-tensor/") (:directory "/Users/george/git/trivial-simd/") :inherit-configuration))
+(asdf:load-system :cl-tensor/tests)
+(unless (every #'fiveam:run! '(cl-tensor/tests::vector-copy-runs-and-fallbacks cl-tensor/tests::vector-copy-encoded-bits cl-tensor/tests::vector-copy-destination-layouts cl-tensor/tests::access-and-copy cl-tensor/tests::foreign-access-and-copy))
+  (error "Copy validation failed"))

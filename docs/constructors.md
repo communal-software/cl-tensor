@@ -44,13 +44,25 @@ Constructors return independent, row-major contiguous tensors with dtype `:f32` 
 
 `(tref tensor &rest indices)` reads an element; `(setf (tref tensor indices...) value)` writes a coerced value and returns the supplied value. There must be one integer index per axis, starting at zero. Negative indices and out-of-bounds indices signal an error.
 
-`(copy-tensor tensor)` preserves dtype, shape and logical values, with independent contiguous storage. It handles reversed, transposed and zero-stride views, including foreign storage. Copying preserves storage placement: device copies stay on the same GPU. See [device tensors](device.md) for explicit transfers and lifetime. Printing shows dtype and shape without reading elements.
+`(copy-tensor tensor)` preserves dtype, shape and logical values, with independent contiguous storage. It handles reversed, transposed and zero-stride views, including foreign storage. Compatible independent Lisp vectors use bulk copies of contiguous inner runs, including padded and reversed outer rows. Other layouts and storage types use their storage copying hooks. Shared-vector copies retain elementwise traversal order. [Complete inference measurements](copy-performance.md) cover Qwen prefill, cached decode and generation.
+
+Copying preserves storage placement: device copies stay on the same GPU. See [device tensors](device.md) for explicit transfers and lifetime. Printing shows dtype and shape without reading elements.
 
 ```lisp
 (let ((a (ct:zeros '(2 3))))
   (setf (ct:tref a 1 2) 7)
   (ct:tref (ct:copy-tensor a) 1 2))
 ;; => 7.0
+```
+
+Concatenation copies padded rows without changing the input view:
+
+```lisp
+(let ((view (ct:make-tensor-view
+             (make-array 8 :element-type 'single-float :initial-element 1f0)
+             '(2 3) :strides '(4 1))))
+  (ct:concatenate (list view view) :axis 1))
+;; => #<TENSOR :F32 (2 6)>
 ```
 
 For `:f16` and `:bf16`, `zeros` creates zero bits and `tref` reads/writes unsigned 16-bit patterns. Other value constructors reject these storage-only dtypes; use [conversion](conversion.md) to encode values.

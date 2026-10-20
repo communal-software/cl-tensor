@@ -1,0 +1,42 @@
+{
+  "revisions": {
+    "cl-tensor": "ad606e270c74f5ad8f7a65959c98555467d65841",
+    "cl-inference": "bd2e057c92630dabfbc49cacd35a7f71d87a1dff",
+    "trivial-simd": "26bb84d9afaeb146b5e92c1b27f594268914e159"
+  },
+  "runtime_patch": "measured-access.lisp contains the uncommitted bulk copy implementation; before replaces COPY-VECTOR-RUNS with a function returning NIL, preserving the generic path plus one helper call",
+  "machine": "Apple M1, 8 GiB RAM, macOS 15.7.5, SBCL 2.6.8",
+  "method": "Three alternating fresh-process pairs; Qwen3 0.6B F16/Q8_0; prompt length 128; one warmup, median of three calls, full GC before each; VECLIB_MAXIMUM_THREADS=1; native SIMD requested; no tensor executor; every generation checks four greedy token IDs",
+  "files_sha256": {
+    "copy-full-tests.lisp": "3f713d6ab637a02b4c2789c31f283bd172d5c44e8de898caa4f4f7027218951c",
+    "3-before.log": "f199b13cd6dffc2c8f0e24782e0cd0f172e520484a92e5a3ef7966aded96da1e",
+    "3-after.log": "c0e61b4ab8b453fd332c40dd2a844f783ff70b12e8f9865d1f681053f0d41d51",
+    "summary.json": "3e9d6fd245d3cd8d98285c2ca4a3d6a37b00e7b2a876f82c9d13318fd67fc0cb",
+    "tensor-validation.log": "4d9f11671fcbb85e7cfca56e991960c24e89fcfc78b9505f00434ee77abfd5f2",
+    "1-before-environment.json": "32f7a317bbab88786da9dfb82912b1a781f281b8b5c81cb7e335b787ee7ae055",
+    "run-copy-inference.py": "986874fd05885b5a1210c7a1c7d191fd8b36b258cd43f6692376ca46bffbd0bc",
+    "inference-validation.log": "68608997a0a284387ad203a4d1c0abb95176984874ea28b2fdb9c99d9b63b67d",
+    "inference-stride-validation.lisp": "f7df9e5bb82962ad1968fd413b11ca916ae0a22fe641d5b0a1856826b88cdef9",
+    "1-before.log": "e7395b5d8d17917deec8267264070bd369a9622e55a5070a8d47f1abedeeccf9",
+    "2-after.log": "c21506ab9b9d83e9ed21d6519a3154c27933bab9e16c3ce62f657ec9535b2286",
+    "2-before-environment.json": "06dfaa74e327f53479bed57cfa379b3d17a267d5c680dcd01d6850666b1fd1f3",
+    "measured-access.lisp": "1e04cdcffa72ab11c606e71c56640cc217d5d4b9b6af4aaa3c7133e5f788d9e3",
+    "1-after.log": "544a8eb2ea941ecde08049dd2ab92a6b699036f3ec21c72eb36f265bc99dab7f",
+    "interference.json": "049533aeb6acb213bccd68c08414736cab0990ff04d1ec444057f679048f65d1",
+    "3-after-environment.json": "be7de2b0d068087eb9b3af38241a5f7a5685d8cfd7ec55b6213b2a397c2cc20a",
+    "2-before.log": "cea054302b951cbb6aa7c889e419fedde7b29c85657a2575e272563fb21920cf",
+    "copy-inference-bench.lisp": "f12652cbf0c2aeae8e9c8a515798ad7cd733bad1db84b16448e21d883f90cec3",
+    "ccl-copy-validation.log": "3533a6f61a7198478722f0b369e914aff0324ae4c6e24304802cc58ea0301b0a",
+    "3-before-environment.json": "6ce6eb0de46592cf5d94cd3541335dd542eacc4af22402ef0e4214a61f34ee5e",
+    "2-after-environment.json": "181e7a2f401e3f9efc16d008efd3e16204809978f8961fb9a22d6d64aa42b71f",
+    "copy-validation.lisp": "3eb5407306255aac389c9121beda1a01890fed509b41ebd1bcac31babce41fb5",
+    "results.csv": "10549ac555caa2523173256682ff86e6858ebae7e37b1c85d46fbc74f34ceb0a",
+    "1-after-environment.json": "44a5d890cf1d55f78a2494b6850917aa56092843e3180c79330474adde829250"
+  },
+  "native_library_sha256": "bb57ca4a63933aa75223c1c3a22e07d33e91bb0cbd89b90fcd59dc21dfbb5973",
+  "validation": {
+    "SBCL tensor checks": 136532,
+    "SBCL inference checks": 39739,
+    "CCL copy checks": 302
+  }
+}
