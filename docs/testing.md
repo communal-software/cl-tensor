@@ -8,6 +8,42 @@ sbcl --non-interactive --eval '(require :asdf)' --eval '(asdf:test-system :cl-te
 
 `asdf:test-system` loads `cl-tensor/tests` and signals an error if any check fails. From a REPL, `(cl-tensor/tests:run-tests)` returns true when every check passes.
 
+## Continuous integration
+
+GitHub Actions runs the CPU FiveAM suite. GPU tests and benchmarks are separate local checks.
+
+| Trigger | Platforms | Lisps | Backends |
+|---|---|---|---|
+| Push to `trunk`, pull request targeting `trunk` | Linux x86-64 | SBCL | Native, Lisp |
+| Manual run, any tag push | Linux x86-64, Linux ARM64, macOS ARM64 | SBCL, ECL | Native, Lisp |
+
+Changes confined to `docs/**`, Markdown files or `LICENSE` skip ordinary CI. Mixed code/documentation changes run CI. Tags and manual runs always select the full twelve-job matrix. A newer run cancels an older run for the same pull request or ref.[^ci-filter]
+
+Choose **Actions → CI → Run workflow** to run the full matrix on a selected branch or tag.
+
+CI builds the pinned `trivial-simd` shared library before loading tests and verifies the requested backend and source directories. Its logs include the dependency commit, Lisp version and selected backend. Dependencies are installed without a cache.
+
+### Reproduce a CI test
+
+With Quicklisp dependencies installed and a built `trivial-simd` checkout:
+
+```sh
+export CL_TENSOR_DIR="$PWD"
+export TRIVIAL_SIMD_DIR="$HOME/git/trivial-simd"
+export CI_QUICKLISP_DIR="$HOME/quicklisp"
+export CI_LISP=sbcl
+export TRIVIAL_SIMD_BACKEND=native
+bash .github/scripts/lisp.sh .github/scripts/test.lisp
+```
+
+Set `CI_LISP=ecl` or `TRIVIAL_SIMD_BACKEND=lisp` for the other combinations. Both backends use a built native library because some tests exercise native operations explicitly.
+
+### Update the dependency pin
+
+Change the full `trivial-simd` commit SHA in `.github/workflows/ci.yml`. Build that revision and run both backends locally, then request a full CI run before merging the update.
+
+## CPU coverage
+
 | File | Covers |
 |---|---|
 | `tests/tensor.lisp` | Dtype inference, construction, view validation, indexing |
@@ -175,3 +211,5 @@ Gather checks cover scalar and batched token indices, negative and out-of-range 
 [^backend]: The backend binding is an upstream test hook, not a cl-tensor public API. Use `:native` only when the native library is available; ARM64 does not provide the `:sbcl` SIMD backend.
 
 [^injection]: ECL compiled calls bypass function-cell replacement, so the injected kernel-failure check runs on SBCL. The input-read and executor-failure checks run on both implementations.
+
+[^ci-filter]: GitHub does not evaluate path filters for tag pushes. Docs-only pull requests do not produce CI checks, so this path-filtered workflow should not be configured as a required branch-protection check.
