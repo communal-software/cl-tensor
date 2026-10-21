@@ -15,11 +15,11 @@ GitHub Actions runs the CPU FiveAM suite. GPU tests and benchmarks are separate 
 | Trigger | Platforms | Lisps | Backends |
 |---|---|---|---|
 | Push to `trunk`, pull request targeting `trunk` | Linux x86-64 | SBCL | Native, Lisp |
-| Manual run, any tag push | Linux x86-64, Linux ARM64, macOS ARM64 | SBCL, ECL | Native, Lisp |
+| Manual run, any tag push | Linux x86-64, Linux ARM64, macOS ARM64 | SBCL; ECL macOS only | Native, Lisp |</think><tool_call>edit<arg_key>newString</arg_key><arg_value>| Manual run, any tag push | Linux x86-64, Linux ARM64, macOS ARM64 | SBCL; ECL macOS only | Native, Lisp |
 
-Changes confined to `docs/**`, Markdown files or `LICENSE` skip ordinary CI. Mixed code/documentation changes run CI. Tags and manual runs always select the full twelve-job matrix. A newer run cancels an older run for the same pull request or ref.[^ci-filter]
+Changes confined to `docs/**`, Markdown files or `LICENSE` skip ordinary CI. Mixed code/documentation changes run CI. Tags and manual runs always select the full eight-job matrix. A newer run cancels an older run for the same pull request or ref.[^ci-filter]
 
-Choose **Actions → CI → Run workflow** to run the full matrix on a selected branch or tag.
+Choose **Actions → CI → Run workflow** to run the full matrix on a selected branch or tag. The full matrix is currently eight jobs: SBCL on all three platforms with both backends, plus ECL on macOS with both backends. Linux ECL jobs are excluded while the threaded-executor runtime crash is being investigated ([issue #35](https://github.com/communal-software/cl-tensor/issues/35)).
 
 CI builds the pinned `trivial-simd` shared library before loading tests and verifies the requested backend and source directories. Its logs include the dependency commit, Lisp version and selected backend. Dependencies are installed without a cache.
 

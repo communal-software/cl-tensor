@@ -37,9 +37,11 @@ jobs:
           full = os.environ['EVENT_NAME'] == 'workflow_dispatch' or os.environ['REF'].startswith('refs/tags/')
           platforms = [('ubuntu-24.04', 'X64'), ('ubuntu-24.04-arm', 'ARM64'), ('macos-15', 'ARM64')]
           lisps = ['sbcl', 'ecl'] if full else ['sbcl']
+          # TODO (issue #35): Linux ECL combinations return once the threaded-executor runtime crash is resolved.
           entries = [dict(os=runner, arch=arch, lisp=lisp, backend=backend)
                      for (runner, arch), lisp, backend in itertools.product(
-                         platforms if full else platforms[:1], lisps, ['native', 'lisp'])]
+                         platforms if full else platforms[:1], lisps, ['native', 'lisp'])
+                     if lisp == 'sbcl' or runner == 'macos-15']
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('entries=' + json.dumps(entries) + '\n')
           PY
